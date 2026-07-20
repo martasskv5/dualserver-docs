@@ -1139,6 +1139,16 @@ export const docsNavigation = [
             },
         ],
     },
+
+    {
+        title: 'Authentik',
+        links: [
+            { 
+                title: "Setup Guide",
+                href: "/authentik/setup",
+            }
+        ]
+    }
 ]
 
 export function NavigationDocs({ className }) {

@@ -1,0 +1,46 @@
+import {Note} from "@/components/mdx"
+import { FirewallRulesTable } from "@/components/Tables"
+
+export const description =
+    'Setup and configure authentik'
+
+# Setup and configure authentik
+
+Authentik will run as a Docker container inside LXC. The installation will be done as stated on the [official documentation](https://next.goauthentik.io/install-config/install/docker-compose/).
+
+## Create a new LXC container
+
+To create a new LXC with Docker installed, we will use the Docker [community script](https://community-scripts.org/scripts/docker) with custom parameters.
+
+```bash
+var_cpu="2" var_ram="4096" var_disk="10" bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/docker.sh)"
+```
+
+<Note>
+    Later migrate to custom silent install script with all parameters set to avoid user input. This will allow for a fully automated installation of authentik in the future.
+</Note>
+
+## Setup authentik container
+
+Connect to the LXC container and create a new directory for authentik.
+
+```bash
+mkdir compose
+wget https://docs.goauthentik.io/compose.yml
+```
+
+Create a new `.env` file with the following content:
+
+```bash
+echo "PG_PASS=$(openssl rand -base64 36 | tr -d '\n')" >> .env
+echo "AUTHENTIK_SECRET_KEY=$(openssl rand -base64 60 | tr -d '\n')" >> .env
+echo "COMPOSE_PORT_HTTP=80" >> .env
+echo "COMPOSE_PORT_HTTPS=443" >> .env
+```
+
+Start the authentik container with the following command:
+
+```bash
+docker compose pull
+docker compose up -d
+```
