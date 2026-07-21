@@ -4,7 +4,7 @@ import { FirewallRulesTable } from "@/components/Tables"
 export const description =
     'Setup and configure authentik'
 
-# Setup and configure authentik
+# Install authentik
 
 Authentik will run as a Docker container inside LXC. The installation will be done as stated on the [official documentation](https://next.goauthentik.io/install-config/install/docker-compose/).
 
@@ -43,4 +43,8 @@ Start the authentik container with the following command:
 ```bash
 docker compose pull
 docker compose up -d
-```
+``` 
+
+## Setup static IP address
+
+In OPNsense, create a static lease for the authentik container. This will ensure that the container always has the same IP address. Also assign it also a domain name.

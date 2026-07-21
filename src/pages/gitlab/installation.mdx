@@ -1,0 +1,12 @@
+export const description =
+    'Gitlab installation and configuration guide'
+
+# Install Gitlab
+
+Create a [LXC](/proxmox/create-lxc) container with the following parameters:
+- CPU: `2`
+- RAM: `4096 MB`
+- Disk: `40 GB`
+- Network: `DHCP`
+- Interface: `vmbr1`
+- Hostname: `gitlab`
