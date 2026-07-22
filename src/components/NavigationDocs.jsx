@@ -78,6 +78,10 @@ export const docsNavigation = [
             {
                 title: "Create Application",
                 href: "/authentik/creating-new-application",
+            },
+            {
+                title: "Gitlab Integration",
+                href: "/authentik/gitlab-integration",
             }
         ]
     },

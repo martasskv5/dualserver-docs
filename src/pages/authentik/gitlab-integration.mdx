@@ -1,0 +1,126 @@
+import {Note} from "@/components/mdx";
+
+export const description =
+    "GitLab integration guide for Authentik"
+
+# GitLab Integration
+
+## Authentik Part
+
+### Create a property mapping
+
+Go to Customization → Property Mappings → Create → Scope Mapping
+
+| Field      | Value           |
+| ---------- | --------------- |
+| Name       | `GitLab Groups` |
+| Scope name | `gitlab_groups` |
+| Expression | *(see below)*   |
+
+```python
+groups = []
+user_groups = request.user.ak_groups.all()
+user_group_names = [g.name for g in user_groups]
+
+is_lector = "Lectors" in user_group_names
+is_student = "Students" in user_group_names
+
+for group in user_groups:
+    if group.name in ["Lectors", "Students"]:
+        continue
+    
+    if group.name.startswith("sk"):
+        if is_lector:
+            groups.append(f"{group.name}-lectors")
+        elif is_student:
+            groups.append(f"{group.name}-students")
+
+return {
+    "groups": groups,
+    "email": request.user.email,
+    "username": request.user.username,
+    "name": request.user.name
+}
+```
+
+Output structure of mapping:
+
+| User's Groups         | Emitted Claim      |
+| --------------------- | ------------------ |
+| `Lectors`, `sk25-26`  | `sk25-26-lectors`  |
+| `Students`, `sk25-26` | `sk25-26-students` |
+| `Lectors`, `sk26-27`  | `sk26-27-lectors`  |
+
+### Create OIDC provider
+
+| Tab                            | Field              | Value                                                                      |
+| ------------------------------ | ------------------ | -------------------------------------------------------------------------- |
+| **General**                    | Name               | `GitLab OIDC`                                                              |
+|                                | Authorization flow | `default-provider-authorization-explicit-consent`                          |
+|                                | Client type        | `Confidential`                                                             |
+|                                | Client ID          | *(auto-generated, copy it)*                                                |
+|                                | Client Secret      | *(auto-generated, copy it)*                                                |
+|                                | Redirect URIs      | `https://gitlab.yourdomain.com/users/auth/openid_connect/callback`         |
+| **Advanced protocol settings** | Scopes             | Add `gitlab_groups` (custom scope)                                    |
+|                                | Subject mode       | `Based on the User's UUID` (recommended) or `Based on the User's username` |
+|                                | Issuer mode        | `Same identifier is used for all providers`                                |
+
+<Note>
+    Make sure the openid, profile, email, and your custom gitlab_groups scopes are included.
+</Note>
+
+### Create a new application
+
+Go to Applications → Applications → Create
+
+| Field    | Value                                    |
+| -------- | ---------------------------------------- |
+| Name     | `GitLab`                                 |
+| Slug     | `gitlab`                                 |
+| Provider | `GitLab OIDC` (the one you just created) |
+
+
+## GitLab Part
+
+### Enable OmniAuth OpenID Connect
+
+Edit `/etc/gitlab/gitlab.rb`
+
+```ruby
+# /etc/gitlab/gitlab.rb
+gitlab_rails['omniauth_enabled'] = true
+gitlab_rails['omniauth_allow_single_sign_on'] = ['openid_connect']
+gitlab_rails['omniauth_block_auto_created_users'] = false
+gitlab_rails['omniauth_auto_link_ldap_user'] = false
+gitlab_rails['omniauth_auto_link_saml_user'] = false
+gitlab_rails['omniauth_providers'] = [
+  {
+    name: "openid_connect",
+    label: "Authentik",
+    icon: "https://authentik.yourdomain.com/static/dist/assets/icons/icon.png",
+    args: {
+      name: "openid_connect",
+      scope: ["openid", "profile", "email", "gitlab_groups"],
+      response_type: "code",
+      issuer: "https://authentik.yourdomain.com/application/o/gitlab/",
+      client_auth_method: "query",
+      discovery: true,
+      uid_field: "sub",
+      pkce: true,
+      client_options: {
+        identifier: "YOUR_CLIENT_ID",
+        secret: "YOUR_CLIENT_SECRET",
+        redirect_uri: "https://gitlab.yourdomain.com/users/auth/openid_connect/callback",
+      }
+    }
+  }
+]
+```
+
+```bash
+gitlab-ctl reconfigure
+```
+
+## Group syncing
+
+Gitlab CE cant sync groups from OIDC provider, so we have to use a workaround. We will use custom webhook server that will listen to OIDC login events and sync groups to Gitlab. You can find the code for this webhook server [here](/docs-static/files/webhook-server.py)
