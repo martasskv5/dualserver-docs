@@ -55,6 +55,10 @@ export const docsNavigation = [
                 href: "/proxmox/installation",
             },
             {
+                title: "Networking",
+                href: "/proxmox/networking",
+            },
+            {
                 title: "Create LXC",
                 href: "/proxmox/create-lxc",
             }
@@ -70,6 +74,10 @@ export const docsNavigation = [
             { 
                 title: "Installation",
                 href: "/authentik/installation",
+            },
+            {
+                title: "Create Application",
+                href: "/authentik/creating-new-application",
             }
         ]
     },
