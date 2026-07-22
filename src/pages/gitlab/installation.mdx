@@ -1,7 +1,9 @@
 export const description =
     'Gitlab installation and configuration guide'
 
-# Install Gitlab
+# Installing Gitlab
+
+## Create a new LXC container
 
 Create a [LXC](/proxmox/create-lxc) container with the following parameters:
 - CPU: `2`
@@ -10,3 +12,49 @@ Create a [LXC](/proxmox/create-lxc) container with the following parameters:
 - Network: `DHCP`
 - Interface: `vmbr1`
 - Hostname: `gitlab`
+- Feature: `nesting=1` (this is required for Gitlab to work properly in LXC)
+- Feature: `keyctl=1` (this is required for Gitlab to work properly in LXC)
+
+## Setup Gitlab container
+
+Install Gitlab using the [official documentation](https://docs.gitlab.com/install/package/debian/?tab=Community+Edition). The installation will be done as stated on the official documentation.
+
+If there were any errors related to locales, run the following command to fix them:
+```bash
+# 1. Ensure the locale is uncommented in locale.gen and actually generated
+sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+locale-gen en_US.UTF-8
+
+# 2. Verify it's really there
+locale -a | grep en_US
+
+# 3. Set system-wide locale properly (this creates /etc/default/locale)
+update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+
+# 4. Export for current session
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
+# 5. Clear any stale PostgreSQL data (safe, initdb never succeeded)
+rm -rf /var/opt/gitlab/postgresql/data/*
+
+# 6. Reconfigure GitLab
+gitlab-ctl reconfigure
+```
+
+## Fix host shared memory issue
+
+To make Gitlab work properly in LXC, we must apply missing karnel parameters.
+
+Open `/etc/sysctl.conf` and add the following lines:
+```
+kernel.sem=250 32000 32 262
+kernel.shmall=4194304
+kernel.shmmax=17179869184
+net.core.somaxconn=1024
+```
+
+Then run the following command to apply the changes:
+```bash
+sysctl -p
+```
