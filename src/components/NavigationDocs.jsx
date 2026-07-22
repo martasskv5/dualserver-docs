@@ -65,6 +65,19 @@ export const docsNavigation = [
         ]
     },
     {
+        title: 'OPNsense',
+        links: [
+            {
+                title: "Overview",
+                href: "/opnsense/overview",
+            },
+            {
+                title: "Installation",
+                href: "/opnsense/installation",
+            }
+        ]
+    },
+    {
         title: 'Authentik',
         links: [
             {

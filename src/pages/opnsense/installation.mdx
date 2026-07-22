@@ -1,0 +1,89 @@
+import {Note} from "@/components/mdx";
+
+export const description =
+    "Installation guide for OPNsense on Proxmox"
+
+# Installation
+
+## Download the ISO
+- Go to [https://opnsense.org/download/](https://opnsense.org/download/)
+- Select **amd64**, image type **dvd**
+- Extract the `.iso.bz2` file, then upload the `.iso` to Proxmox: **Datacenter → Node → local → ISO Images → Upload**
+
+## Create a new VM
+- Go to **Datacenter → Node → Create VM**
+
+Parameters:
+
+| Setting           | Value                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| **Name**          | `GW`                                                                                 |
+| **VM ID**         | `100`                                                                                |
+| **OS**            | Type: **Other**                                                                      |
+| **System**        | Machine: `q35`, BIOS: `OVMF (UEFI)`, **uncheck** "Pre-Enroll keys" (Secure Boot off) |
+| **Disk**          | SCSI, 32 GB                                                                          |
+| **CPU**           | 2 cores, Type: `host` (for AES-NI)                                                   |
+| **Memory**        | 8 GB                                                                                 |
+| **Network 1**     | Bridge: `vmbr0`, Model: `VirtIO`, Multiqueue: `2`                                    |
+| **Start at boot** | ✅ Enable this in Options                                                            |
+
+After creation, add a **second network device**:
+- **Hardware → Add → Network Device**
+- Bridge: `vmbr1`, Model: `VirtIO`, Multiqueue: `2`
+
+<Note>
+    In Options → Boot Order, make sure the CD/DVD drive is first for initial install.
+</Note>
+
+## Install OS
+
+1. Start the VM and open the console
+2. At boot, press any key when you see `Press any key to start the manual interface assignment`
+3. Assign interfaces:
+    - **WAN:** `vtnet0` (connected to `vmbr0` / physical network)
+    - **LAN:** `vtnet1` (connected to `vmbr1` / internal VMs)
+    - Optional: press Enter to skip
+4. Confirm with `y`
+5. Log in as `installer` / `opnsense`
+6. Install with **Auto (UFS)** partitioning (avoid ZFS inside a VM on ZFS host)
+7. Set a root password when prompted
+8. Reboot and remove the ISO from the VM hardware
+
+## Initial OPNsense Configuration (Console)
+
+After reboot, log in as `root` / your password at the console:
+
+1. Press `1` to assign interfaces (verify WAN/LAN are correct)
+2. Press `2` to set interface IP addresses:
+    - **LAN:** Set to `10.11.0.0/16` (different subnet from the physical network!)
+    - Enable DHCP server on LAN: `Y`
+    - DHCP range: `10.11.10.0` to `10.11.20.0` - this will be changed later according to vlans
+    - Leave IPv6 blank for now
+3. **WAN:** Should pick up an IP via DHCP from your physical router automatically
+
+## Access the Web GUI
+
+From a VM connected to `vmbr1`, or from your Proxmox host (if it has access), browse to:
+
+```
+https://10.11.0.1
+```
+
+Login: `root` / your password
+
+## Run the Setup Wizard
+
+1. **General Setup:** Hostname, DNS (you can use `8.8.8.8` or physical router)
+2. **WAN Configuration:** Should already be DHCP. If your physical router gives RFC1918 IPs (like `192.168.1.x`), **uncheck** "Block RFC1918 networks" on the WAN interface, or you'll block your own upstream.
+3. **LAN Configuration:** Already set to `10.11.0.0/16`
+4. Set a strong admin password
+
+# Configure Other VMs to Use OPNsense
+
+For each VM that should use OPNsense as its router:
+
+1. **VM Hardware → Network Device**
+2. Set **Bridge** to `vmbr1` (the LAN bridge)
+3. Model: `VirtIO`
+
+These VMs will get DHCP IPs in `10.11.10.x` from OPNsense and route through it.
