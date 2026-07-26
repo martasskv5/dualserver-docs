@@ -97,20 +97,23 @@ gitlab_rails['omniauth_providers'] = [
   {
     name: "openid_connect",
     label: "Authentik",
-    icon: "https://authentik.yourdomain.com/static/dist/assets/icons/icon.png",
+    icon: "https://auth.pve99.internal/static/dist/assets/icons/icon.png",
     args: {
       name: "openid_connect",
       scope: ["openid", "profile", "email", "gitlab_groups"],
       response_type: "code",
-      issuer: "https://authentik.yourdomain.com/application/o/gitlab/",
-      client_auth_method: "query",
-      discovery: true,
+      issuer: "https://auth.pve99.internal/",
+      discovery: false,  # ← disable
       uid_field: "sub",
       pkce: true,
       client_options: {
         identifier: "YOUR_CLIENT_ID",
         secret: "YOUR_CLIENT_SECRET",
-        redirect_uri: "https://gitlab.yourdomain.com/users/auth/openid_connect/callback",
+        redirect_uri: "https://git.pve99.internal/users/auth/openid_connect/callback",
+        authorization_endpoint: "https://auth.pve99.internal/application/o/authorize/",
+        token_endpoint: "https://auth.pve99.internal/application/o/token/",
+        userinfo_endpoint: "https://auth.pve99.internal/application/o/userinfo/",
+        jwks_uri: "https://auth.pve99.internal/application/o/gitlab/jwks/"
       }
     }
   }
