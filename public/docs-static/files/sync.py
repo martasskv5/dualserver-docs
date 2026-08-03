@@ -17,6 +17,8 @@ import sys
 import time
 import logging
 import requests
+import secrets
+import string
 from typing import Dict, List, Optional, Set
 
 # ── Logging ──────────────────────────────────────────────────────────────
@@ -238,6 +240,18 @@ class GitLabClient:
     def get_users(self) -> List[dict]:
         return self._get("/users")
 
+    def create_user(self, username: str, email: str, name: str) -> dict:
+        """Create a new GitLab user with a random password."""
+        password = ''.join(secrets.choice(string.ascii_letters + string.digits + string.punctuation) for _ in range(32))
+        return self._post("/users", {
+            "email": email,
+            "username": username,
+            "name": name or username,
+            "password": password,
+            "skip_confirmation": True,
+            "can_create_group": False,
+        })
+
     # Projects (for visibility enforcement)
     def get_group_projects(self, group_id: int) -> List[dict]:
         return self._get(f"/groups/{group_id}/projects")
@@ -364,11 +378,31 @@ def sync():
         for username, role in desired_members.items():
             gl_user = gl_users.get(username)
             if not gl_user:
-                logger.warning(
-                    f"  User '{username}' not found in GitLab yet — "
-                    f"they need to log in via OIDC first"
-                )
-                continue
+                # Try to create the user from authentik data
+                ak_user = None
+                for u in ak_users:
+                    if u.get("username") == username:
+                        ak_user = u
+                        break
+
+                if ak_user:
+                    logger.info(f"  Creating GitLab user: {username}")
+                    try:
+                        new_user = gl.create_user(
+                            username=username,
+                            email=ak_user.get("email", f"{username}@placeholder.local"),
+                            name=ak_user.get("name", username),
+                        )
+                        gl_users[username] = new_user
+                        gl_user = new_user
+                    except Exception as e:
+                        logger.error(f"    Failed to create user {username}: {e}")
+                        continue
+                else:
+                    logger.warning(
+                        f"  User '{username}' not found in authentik or GitLab, skipping"
+                    )
+                    continue
 
             current = current_members.get(username)
             if not current:
