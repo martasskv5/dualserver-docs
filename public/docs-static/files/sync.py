@@ -32,6 +32,7 @@ AUTHENTIK_URL = os.environ.get("AUTHENTIK_URL", "http://authentik-server:9000")
 AUTHENTIK_TOKEN = os.environ.get("AUTHENTIK_TOKEN")
 GITLAB_URL = os.environ.get("GITLAB_URL", "https://git.pve99.internal")
 GITLAB_TOKEN = os.environ.get("GITLAB_TOKEN")
+GITLAB_VERIFY_SSL = os.environ.get("GITLAB_VERIFY_SSL", "true").lower() == "true"
 
 # Parent group names in authentik
 LECTOR_GROUP = os.environ.get("LECTOR_GROUP", "Lectors")
@@ -139,8 +140,9 @@ class AuthentikClient:
 
 # ── GitLab Client ────────────────────────────────────────────────────────
 class GitLabClient:
-    def __init__(self, base_url: str, token: str):
+    def __init__(self, base_url: str, token: str, verify_ssl: bool = True):
         self.base_url = base_url.rstrip("/")
+        self.verify_ssl = verify_ssl
         self.headers = {
             "PRIVATE-TOKEN": token,
             "Content-Type": "application/json",
@@ -154,7 +156,7 @@ class GitLabClient:
             p = dict(params) if params else {}
             p["page"] = page
             p["per_page"] = 100
-            resp = requests.get(url, headers=self.headers, params=p, timeout=30)
+            resp = requests.get(url, headers=self.headers, params=p, timeout=30, verify=self.verify_ssl)
             resp.raise_for_status()
             data = resp.json()
             if isinstance(data, dict) and "error" in data:
@@ -174,7 +176,7 @@ class GitLabClient:
         if DRY_RUN:
             logger.info(f"[DRY-RUN] POST {endpoint} -> {data}")
             return {}
-        resp = requests.post(url, headers=self.headers, json=data, timeout=30)
+        resp = requests.post(url, headers=self.headers, json=data, timeout=30, verify=self.verify_ssl)
         if resp.status_code == 409:
             logger.debug(f"Conflict on POST {endpoint}: probably already exists")
             return resp.json() if resp.text else {}
@@ -186,7 +188,7 @@ class GitLabClient:
         if DRY_RUN:
             logger.info(f"[DRY-RUN] PUT {endpoint} -> {data}")
             return {}
-        resp = requests.put(url, headers=self.headers, json=data, timeout=30)
+        resp = requests.put(url, headers=self.headers, json=data, timeout=30, verify=self.verify_ssl)
         resp.raise_for_status()
         return resp.json()
 
@@ -195,7 +197,7 @@ class GitLabClient:
         if DRY_RUN:
             logger.info(f"[DRY-RUN] DELETE {endpoint}")
             return
-        resp = requests.delete(url, headers=self.headers, timeout=30)
+        resp = requests.delete(url, headers=self.headers, timeout=30, verify=self.verify_ssl)
         if resp.status_code == 404:
             return
         resp.raise_for_status()
@@ -302,7 +304,7 @@ def sync():
         sys.exit(1)
 
     ak = AuthentikClient(AUTHENTIK_URL, AUTHENTIK_TOKEN)
-    gl = GitLabClient(GITLAB_URL, GITLAB_TOKEN)
+    gl = GitLabClient(GITLAB_URL, GITLAB_TOKEN, verify_ssl=GITLAB_VERIFY_SSL)
 
     logger.info("=" * 60)
     logger.info("Starting authentik → GitLab sync")
