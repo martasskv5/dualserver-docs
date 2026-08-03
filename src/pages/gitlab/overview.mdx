@@ -1,0 +1,71 @@
+import {Note} from "@/components/mdx";
+
+export const description =
+    "What the GitLab integration looks like from a user's perspective"
+
+# GitLab Overview
+
+GitLab is where students write code, submit assignments, and collaborate on projects. The integration makes sure everyone lands in the right place with the right permissions — without manual setup.
+
+## What you see when you log in
+
+When a teacher or student clicks **Sign in with Authentik**, GitLab checks who they are and sends them straight to their dashboard. There is no separate password to remember.
+
+Once inside, they see the year groups they belong to. Each year group works like an organization on GitHub: it contains projects, members, and settings that are shared across everything inside it.
+
+## What teachers see
+
+A teacher in **sk25-26** sees:
+
+- The **sk25-26** group in their sidebar
+- Every project created by any student in that group
+- The ability to open, review, and contribute to any of those projects
+- Merge request buttons and admin settings for the group
+
+They do not see projects from **sk26-27** unless those projects are explicitly shared.
+
+## What students see
+
+A student in **sk25-26** sees:
+
+- The **sk25-26** group in their sidebar
+- Their own projects and any projects classmates have invited them to
+- The ability to create new projects inside the group
+- An **Invite members** button on their projects to add other students as collaborators
+
+Students cannot create projects outside the year group. Everything they make lives inside **sk25-26** where teachers can see it.
+
+## How projects work
+
+| Action | Who can do it |
+|--------|---------------|
+| Create a new project inside the year group | Students and teachers |
+| Make a project private so teachers cannot see it | No one — all projects are at least Internal |
+| Invite another student to collaborate | Students (up to Developer level) |
+| Change group settings or merge any MR | Teachers only |
+| Delete someone else's project | Teachers only |
+
+## What happens behind the scenes
+
+A background sync service checks Authentik every few minutes and keeps GitLab up to date:
+
+- New year groups appear automatically
+- New members are added with the correct role
+- People who left a year group are removed
+- Any project that somehow became private is flipped back to visible
+
+You do not interact with the sync service directly. It simply ensures that what you set up in Authentik is reflected in GitLab.
+
+## Common questions
+
+**Can I work with someone from another year group?**
+Yes, but only if they are explicitly invited to your specific project. Year groups are separate by default.
+
+**What if my teacher changes classes?**
+Your admin moves them to the new year group in Authentik. On the next sync, they lose access to your old group and gain access to the new one.
+
+**Can I leave the year group?**
+You can click **Leave group**, but the sync service will add you back within a few minutes. If you truly need to be removed, ask your admin to remove you from the year group in Authentik.
+
+**Do I need a GitLab password?**
+No. You log in through Authentik every time. Your GitLab account is created automatically if it does not exist yet.

@@ -1,0 +1,73 @@
+import {Note} from "@/components/mdx";
+
+export const description =
+    "How users and groups are organized in Authentik for the GitLab integration"
+
+# Authentik Overview
+
+Authentik is where everything starts. It is the single place where you manage who people are and which year group they belong to. GitLab simply mirrors what you set up here.
+
+## How people are organized
+
+We use a simple three-layer structure in Authentik:
+
+### Role groups
+
+These tell the system whether someone is a teacher or a student.
+
+| Group | Meaning |
+|-------|---------|
+| **Lectors** | Teachers and administrators. They get full access to every project in their assigned year group. |
+| **Students** | Regular students. They can create projects and invite classmates, but teachers always have oversight. |
+
+A person must be in exactly one of these role groups. If they are in neither, the sync service ignores them.
+
+### Year groups
+
+These represent the actual classes or school years.
+
+| Group | Meaning |
+|-------|---------|
+| **sk25-26** | Everyone in the 2025–2026 school year |
+| **sk26-27** | Everyone in the 2026–2027 school year |
+
+Every teacher and student is assigned to one year group. When a teacher switches to a different class, you simply move them to the new year group in Authentik. Their GitLab access updates automatically on the next sync.
+
+### What a typical user looks like
+
+A teacher might belong to:
+- `Lectors`
+- `sk25-26`
+
+A student might belong to:
+- `Students`
+- `sk25-26`
+
+The sync service reads these memberships and translates them into GitLab roles behind the scenes.
+
+## What happens when things change
+
+| You do this in Authentik | What happens in GitLab |
+|--------------------------|------------------------|
+| Add a student to `sk25-26` | They gain access to the `sk25-26` group with Developer permissions |
+| Move a teacher from `sk25-26` to `sk26-27` | They lose access to `sk25-26` and gain Maintainer access to `sk26-27` |
+| Remove someone from a year group | They are removed from that GitLab group entirely |
+| Rename a group | A new GitLab group is created; the old one is not renamed automatically |
+
+## The property mapping
+
+When a user logs in, Authentik sends a small packet of information to GitLab. We use a custom property mapping to shape that packet so it includes the user's year group and role.
+
+You do not need to touch this mapping during normal use. It is set up once and runs automatically. The only time you might edit it is if you add new role groups or change how year group names work.
+
+## What you manage here
+
+This is your checklist for day-to-day management:
+
+- [ ] Add new students to the **Students** role group
+- [ ] Add new teachers to the **Lectors** role group
+- [ ] Assign everyone to the correct **year group**
+- [ ] Remove graduated students from their year group
+- [ ] Move teachers when they switch classes
+
+Everything else — creating GitLab groups, setting permissions, adding members — happens automatically.
