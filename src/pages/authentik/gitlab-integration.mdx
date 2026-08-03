@@ -66,7 +66,7 @@ Output structure of mapping:
 |                                | Issuer mode        | `Same identifier is used for all providers`                                |
 
 <Note>
-    Make sure the openid, profile, email, and your custom gitlab_groups scopes are included.
+    Make sure the openid, profile, email, and custom gitlab_groups scopes are included.
 </Note>
 
 ### Create a new application
@@ -126,4 +126,71 @@ gitlab-ctl reconfigure
 
 ## Group syncing
 
-Gitlab CE cant sync groups from OIDC provider, so we have to use a workaround. We will use custom webhook server that will listen to OIDC login events and sync groups to Gitlab. You can find the code for this webhook server [here](/docs-static/files/webhook-server.py)
+Gitlab CE cant sync groups from OIDC provider, so we have to use a workaround. We will use custom webhook server that will listen to OIDC login events and sync groups to Gitlab. You can find the code for this webhook server [here](/docs-static/files/sync.py)
+
+### What we need to do
+
+1. Reads all users and groups from authentik
+2. Determines who is a Lector (Maintainer) or Student (Developer)
+3. Creates year groups (sk25-26, sk26-27, etc.) in GitLab as top-level groups
+4. Adds members with the right access level
+5. Removes members who no longer belong
+6. Forces any Private projects to Internal visibility
+
+### Setup
+
+The sync script will run alongside the authentik server, by modifying the docker-compose.yml file. You can also run it as a separate service, but you will have to make sure it has access to the authentik database and the GitLab API.
+
+1. Create API tokens
+authentik token:
+
+    Go to Directory → Tokens & App passwords
+    Create a token for a service account (or use an existing admin)
+    Copy the token value
+
+GitLab token:
+
+    Go to Admin Area → Access Tokens
+    Create a token with api scope
+    Copy the token value
+
+2. Add to your .env file
+```bash
+AUTHENTIK_API_TOKEN=your-authentik-token-here
+GITLAB_API_TOKEN=your-gitlab-token-here
+```
+
+3. Copy files
+Place this folder next to your docker-compose.yml:
+```
+├── docker-compose.yml
+└── authentik-gitlab-sync/
+    ├── Dockerfile
+    └── sync.py
+```
+
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+RUN pip install --no-cache-dir requests
+
+COPY sync.py /app/sync.py
+RUN chmod +x /app/sync.py
+
+CMD ["python", "/app/sync.py"]
+```
+
+4. Add the service
+
+Paste the gitlab-sync service from [docker-compose.snippet.yml](/docs-static/files/docker-compose.snippet.yml) into your authentik docker-compose.yml.
+
+5. Start
+```bash
+docker compose up -d gitlab-sync
+```
+
+Watch logs:
+```bash
+docker logs -f authentik-gitlab-sync
+```

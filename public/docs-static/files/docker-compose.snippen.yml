@@ -1,0 +1,29 @@
+  # Add this service to your existing authentik docker-compose.yml
+  gitlab-sync:
+    build:
+      context: ./authentik-gitlab-sync
+      dockerfile: Dockerfile
+    container_name: authentik-gitlab-sync
+    restart: unless-stopped
+    environment:
+      # Internal authentik URL (inside Docker network)
+      AUTHENTIK_URL: "http://server:9000"
+      # Create this in authentik: Applications → Providers → (your provider) → 
+      #   OR go to Directory → Tokens & App passwords
+      AUTHENTIK_TOKEN: "${AUTHENTIK_API_TOKEN}"
+
+      # Your GitLab instance
+      GITLAB_URL: "https://git.pve99.internal"
+      # Create in GitLab: Admin Area → Access Tokens → Add new token (api scope)
+      GITLAB_TOKEN: "${GITLAB_API_TOKEN}"
+
+      # How often to sync (seconds). 300 = 5 minutes.
+      SYNC_INTERVAL: "300"
+
+      # Set to "true" to preview changes without applying
+      DRY_RUN: "false"
+    # networks:
+      # - authentik  # same network as authentik-server
+    # If GitLab is NOT in the same Docker network, you may need:
+    # extra_hosts:
+    #   - "git.pve99.internal:192.168.x.x"
