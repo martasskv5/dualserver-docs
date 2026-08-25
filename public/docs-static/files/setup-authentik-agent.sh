@@ -83,7 +83,7 @@ echo "=== Configuring PAM cleanly ==="
 pam-auth-update --package --enable ldap mkhomedir
 
 echo "=== Configuring SSH ==="
-cat > /etc/ssh/sshd_config << 'EOF'
+cat > /etc/ssh/ssh_config << 'EOF'
 Port 22
 ListenAddress 0.0.0.0
 HostKey /etc/ssh/ssh_host_rsa_key
@@ -101,7 +101,7 @@ Subsystem sftp /usr/lib/openssh/sftp-server
 Banner /etc/ssh/banner
 SyslogFacility AUTH
 LogLevel INFO
-MaxSessions 10
+MaxSessions 1
 MaxAuthTries 3
 ClientAliveInterval 300
 ClientAliveCountMax 2
