@@ -8,6 +8,7 @@ Synchronizes year-based groups from authentik to GitLab CE.
 - Students get Developer access (can push code, create repos, invite collaborators)
 - Users removed from authentik groups are removed from GitLab groups
 - Private projects are forced to Internal visibility (so everyone can see them)
+- SSH public keys are synced from authentik (SSOT) to GitLab users
 
 Run this inside your Docker Compose stack as a scheduled service.
 """
@@ -252,6 +253,16 @@ class GitLabClient:
             "can_create_group": False,
         })
 
+    # SSH Keys
+    def get_user_keys(self, user_id: int) -> List[dict]:
+        return self._get(f"/users/{user_id}/keys")
+
+    def add_user_key(self, user_id: int, title: str, key: str) -> dict:
+        return self._post(f"/users/{user_id}/keys", {"title": title, "key": key})
+
+    def delete_user_key(self, user_id: int, key_id: int) -> None:
+        self._delete(f"/users/{user_id}/keys/{key_id}")
+
     # Projects (for visibility enforcement)
     def get_group_projects(self, group_id: int) -> List[dict]:
         return self._get(f"/groups/{group_id}/projects")
@@ -307,6 +318,33 @@ def build_desired_state(
             desired[name][username] = role
 
     return desired
+
+
+def _get_ssh_key_from_ak_user(ak_user: dict) -> str:
+    """
+    Extract the SSH public key from an authentik user object.
+    Tries attributes dict first, then top-level key. Handles strings and lists.
+    """
+    raw = None
+
+    # Try nested attributes dict
+    attrs = ak_user.get("attributes")
+    if isinstance(attrs, dict):
+        raw = attrs.get("ssh_public_key")
+
+    # Fallback to top-level key
+    if raw is None:
+        raw = ak_user.get("ssh_public_key")
+
+    # Normalize: if it's a list, take the first non-empty element
+    if isinstance(raw, list):
+        raw = next((item for item in raw if item), None)
+
+    # Normalize: ensure it's a clean string
+    if isinstance(raw, str):
+        return raw.strip()
+
+    return ""
 
 
 def sync():
@@ -435,6 +473,71 @@ def sync():
                     gl.remove_group_member(group_id, current["user_id"])
                 except Exception as e:
                     logger.error(f"    Failed: {e}")
+
+    # ── Sync SSH public keys (authentik is SSOT) ─────────────────────────
+    logger.info("Syncing SSH public keys from authentik...")
+    ssh_sync_count = 0
+    for ak_user in ak_users:
+        username = ak_user.get("username")
+        if not username:
+            continue
+
+        # Determine if user is in sync scope (same logic as build_desired_state)
+        user_group_pks = [str(g) for g in ak_user.get("groups", [])]
+        user_group_names = set()
+        for pk in user_group_pks:
+            grp = ak_groups.get(pk)
+            if grp:
+                user_group_names.add(grp.get("name", ""))
+
+        is_lector = LECTOR_GROUP in user_group_names
+        is_student = STUDENT_GROUP in user_group_names
+        has_year_group = any(
+            ak_groups.get(pk, {}).get("name", "").startswith(YEAR_PREFIX)
+            for pk in user_group_pks
+        )
+
+        if not ((is_lector or is_student) and has_year_group):
+            continue
+
+        gl_user = gl_users.get(username)
+        if not gl_user:
+            logger.info(f"  User {username} not in GitLab, skipping SSH sync")
+            continue
+
+        desired_key = _get_ssh_key_from_ak_user(ak_user)
+        user_id = gl_user["id"]
+
+        if not desired_key:
+            logger.info(f"  No SSH public key in authentik for {username}, skipping")
+            continue
+
+        try:
+            current_keys = gl.get_user_keys(user_id)
+        except Exception as e:
+            logger.error(f"  Failed to fetch SSH keys for {username}: {e}")
+            continue
+
+        current_key_values = {k["key"].strip() for k in current_keys}
+
+        if desired_key in current_key_values:
+            logger.debug(f"  = SSH key for {username} already correct")
+        else:
+            # Remove all existing keys and add the desired one
+            for k in current_keys:
+                logger.info(f"  - Removing old SSH key from {username}")
+                try:
+                    gl.delete_user_key(user_id, k["id"])
+                except Exception as e:
+                    logger.error(f"    Failed: {e}")
+            logger.info(f"  + Adding SSH key for {username}")
+            try:
+                gl.add_user_key(user_id, f"{username}@authentik", desired_key)
+                ssh_sync_count += 1
+            except Exception as e:
+                logger.error(f"    Failed: {e}")
+
+    logger.info(f"  SSH keys synced for {ssh_sync_count} user(s)")
 
     # ── Enforce project visibility ───────────────────────────────────────
     logger.info("Enforcing Internal visibility on all projects...")
