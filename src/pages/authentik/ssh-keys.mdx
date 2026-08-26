@@ -13,6 +13,7 @@ Defining an Object Attribute tells authentik to expect this specific data format
     - Name: `SSH Public Key`
     - Key: `ssh_public_key` (This dictates the exact attribute name: attributes.ssh_public_key)
     - Type: `Text (Multilines)` (Crucial because SSH keys are long and shouldn't be cut off)
+    - Attribute is unique: `True` (This prevents duplicate keys across users)
 4. Save the attribute.
 
 ## Step 2: Create a Prompt for the User Form
