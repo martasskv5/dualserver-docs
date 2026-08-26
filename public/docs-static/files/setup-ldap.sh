@@ -82,6 +82,21 @@ echo "=== Configuring PAM cleanly ==="
 # Update the PAM profiles to explicitly enable LDAP and home-directory creation
 pam-auth-update --package --enable ldap mkhomedir
 
+# Create the PAM access check
+cat > /etc/pam.d/sshd << 'EOF'
+# Standard Debian SSH PAM
+@include common-auth
+@include common-account
+@include common-session
+@include common-password
+
+# LXC access control: only users in /etc/lxc-access.conf can log in
+account required pam_listfile.so item=user sense=allow file=/etc/lxc-access.conf onerr=fail
+EOF
+
+touch /etc/lxc-access.conf
+chmod 644 /etc/lxc-access.conf
+
 echo "=== Configuring SSH ==="
 cat > /etc/ssh/ssh_config << 'EOF'
 Port 22
@@ -107,10 +122,56 @@ ClientAliveInterval 300
 ClientAliveCountMax 2
 UseDNS no
 KbdInteractiveAuthentication yes
+AuthorizedKeysCommand /usr/local/bin/ldap-ssh-keys.sh %u
+AuthorizedKeysCommandUser root
 EOF
 
-echo "=== Creating sudo rules ==="
+echo "=== Importing user SSH keys from Authentik ==="
+cat > /usr/local/bin/ldap-ssh-keys.sh << EOF
+#!/bin/bash
+# Exit immediately if no username is provided
+if [ -z "\$1" ]; then
+    exit 1
+fi
 
+# Configuration - Change to match your authentik environment
+LDAP_URI="ldap://${LDAP_SERVER}:389"
+BASE_DN="${LDAP_BASE_DN}"
+# If your authentik LDAP provider requires search binding, add bind credentials here:
+BIND_DN="${LDAP_BIND_DN}"
+BIND_PASS="${LDAP_BIND_PW}"
+
+
+# Execute search and capture stderr to see what is breaking
+RAW_OUTPUT=\$(ldapsearch -x -H "\$LDAP_URI" \
+                        -D "\$BIND_DN" \
+                        -w "\$BIND_PASS" \
+                        -b "\$BASE_DN" \
+                        "(cn=\$1)" \
+                        ssh_public_key 2>&1)
+
+# Check if ldapsearch threw an explicit connection error
+if [[ "\$RAW_OUTPUT" =~ "Can't contact LDAP server" ]] || [[ "\$RAW_OUTPUT" =~ "Invalid credentials" ]]; then
+    echo "DEBUG ERROR: ldapsearch failed inside the script context!" >&2
+    echo "\$RAW_OUTPUT" >&2
+    exit 1
+fi
+
+# Cleanly isolate the multi-line key block and format it onto one line
+echo "\$RAW_OUTPUT" | awk '
+    BEGIN { found=0 }
+    /^ssh_public_key: / { sub(/^ssh_public_key: /, ""); printf "%s", \$0; found=1; next }
+    /^[ ]/ && found { sub(/^[ ]/, ""); printf "%s", \$0; next }
+    /^[a-zA-Z]/ || /^$/ { if (found) { exit } }
+'
+echo "" # Ensure structural trailing newline for OpenSSH
+EOF
+
+chmod +x /usr/local/bin/ldap-ssh-keys.sh
+chown root:root /usr/local/bin/ldap-ssh-keys.sh
+chmod 755 /usr/local/bin/ldap-ssh-keys.sh
+
+echo "=== Creating sudo rules ==="
 # 1. Secure Administrators Block (Keeps full access)
 cat > /etc/sudoers.d/99-admins << 'EOF'
 %Administrators ALL=(ALL:ALL) NOPASSWD: ALL
@@ -122,7 +183,6 @@ cat > /etc/sudoers.d/98-lectors << 'EOF'
 # Prevent systemctl from spawning a paginated root viewer shell
 Defaults:%Lectors env_keep += "SYSTEMD_PAGER=cat"
 
-Cmnd_Alias LECTOR_RESTART = /bin/systemctl restart apache2, /bin/systemctl restart nginx, /bin/systemctl restart angie, /bin/systemctl restart mysql, /bin/systemctl restart postgresql, /bin/systemctl restart php*-fpm
 Cmnd_Alias LECTOR_STATUS = /bin/systemctl status [A-Za-z0-9_-]*
 Cmnd_Alias LECTOR_USERMGMT = /usr/sbin/useradd [A-Za-z0-9_-]*, /usr/sbin/usermod [A-Za-z0-9_-]*
 Cmnd_Alias LECTOR_FILE_PERMS = /bin/chown [A-Za-z0-9_-]* /home/*, /bin/chmod * /home/*, /bin/chown [A-Za-z0-9_-]* /var/www/*, /bin/chmod * /var/www/*
@@ -137,7 +197,6 @@ cat > /etc/sudoers.d/97-students << 'EOF'
 # Force strict limitations on text pagers for student runs
 Defaults:%Lectors env_keep += "SYSTEMD_PAGER=cat"
 
-Cmnd_Alias STUDENT_WEB_RESTART = /bin/systemctl restart apache2, /bin/systemctl restart nginx, /bin/systemctl restart angie, /bin/systemctl restart php*-fpm
 Cmnd_Alias STUDENT_STATUS = /bin/systemctl status [A-Za-z0-9_-]*
 Cmnd_Alias STUDENT_FILE_PERMS = /bin/chown [A-Za-z0-9_-]* /home/*, /bin/chmod * /home/*, /bin/chown [A-Za-z0-9_-]* /var/www/*, /bin/chmod * /var/www/*
 
@@ -154,6 +213,15 @@ chmod 0440 /etc/sudoers.d/97-students
 
 visudo -c
 
+echo "=== Fixing Global System PATH for standard users ==="
+cat >> /etc/profile << 'EOF'
+
+# Append administrative paths so standard users can execute non-sudo binaries
+if [ "$(id -u)" -ne 0 ]; then
+    export PATH="$PATH:/usr/local/sbin:/usr/sbin:/sbin"
+fi
+EOF
+
 cat > /etc/ssh/banner << 'EOF'
 ***************************************************************************
 *                     PROXMOX AUTHENTIK HOSTING PLATFORM                  *
@@ -169,6 +237,8 @@ chmod 700 /etc/skel/.ssh
 echo "=== Enabling services ==="
 systemctl enable nslcd
 systemctl enable ssh
+systemctl restart nslcd
+systemctl restart ssh
 
 echo "=== Cleaning up ==="
 apt-get clean
