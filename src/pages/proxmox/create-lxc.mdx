@@ -1,0 +1,73 @@
+import {Note, Warning} from "@/components/mdx"
+
+export const description =
+  'Create a new LXC container on Proxmox from the standard template.'
+
+# Create LXC Containers
+
+This guide covers the standard procedure for creating unprivileged LXC containers on Proxmox. Most services in this environment follow this same pattern.
+
+## Prerequisites
+
+Before creating containers, ensure you have:
+
+- A working Proxmox installation
+- The `vmbr1` LAN bridge created (see [Networking](/proxmox/networking))
+- A Debian 13 template uploaded or downloaded
+- OPNsense running and handling DHCP for `vmbr1`
+
+## Standard parameters
+
+Most service containers use these defaults:
+
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| CPU | 1–2 cores | Increase for GitLab or Authentik |
+| RAM | 512 MB – 4 GB | 512 MB for Postfix, 4 GB for GitLab |
+| Disk | 8–40 GB | 8 GB for lightweight services, 40 GB for GitLab |
+| Network | DHCP on `vmbr1` | OPNsense assigns the IP |
+| Features | `nesting=1`, `keyctl=1` | Required for Docker and some services |
+
+## Create from template
+
+1. Go to **Datacenter → Node → Create CT**
+2. Set the **Hostname** and **Password** (or add an SSH key)
+3. Select the **Debian 13** template
+4. Choose **Storage** and set the **Disk size**
+5. Under **CPU**, set cores as needed
+6. Under **Memory**, set the RAM limit
+7. Under **Network**:
+   - **Bridge**: `vmbr1`
+   - **VLAN Tag**: Choose the correct tag for the service (see below)
+   - **IP**: DHCP
+8. Under **Options**:
+   - Check **Unprivileged container**
+   - Add `nesting=1` and `keyctl=1` to features
+9. Finish and start the container
+
+## VLAN tags
+
+OPNsense handles routing between VLANs. Assign the correct tag when creating each container:
+
+| VLAN | Purpose | Services |
+|------|---------|----------|
+| `10` | Management | Authentik, Postfix, mgmt tools |
+| `101` | Lectors | Teacher workstations and servers |
+| `110` | Students 25–26 | Student LXCs for sk25-26 |
+| `120` | Students 26–27 | Student LXCs for sk26-27 |
+
+<Warning>
+  Always assign a VLAN tag. An untagged container on `vmbr1` will not receive a DHCP lease from OPNsense and cannot communicate with other services.
+</Warning>
+
+## After creation
+
+1. Start the container
+2. Open the console or SSH in
+3. Verify network connectivity: `ping 10.11.0.1` (OPNsense LAN IP)
+4. Update packages: `apt update && apt upgrade -y`
+5. Proceed to the service-specific installation guide
+
+<Note>
+  For containers that need Docker (Authentik, GitLab), use the [Docker community script](https://community-scripts.org/scripts/docker) or install Docker manually before continuing.
+</Note>

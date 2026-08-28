@@ -1,36 +1,32 @@
 import {Note} from "@/components/mdx"
-import { FirewallRulesTable } from "@/components/Tables"
 
 export const description =
-    'Setup and configure authentik'
+  'Install Authentik as a Docker container inside an LXC on Proxmox.'
 
-# Install authentik
+# Install Authentik
 
-Authentik will run as a Docker container inside LXC. The installation will be done as stated on the [official documentation](https://next.goauthentik.io/install-config/install/docker-compose/).
+Authentik runs as a Docker container inside an LXC. The installation follows the [official Docker Compose guide](https://docs.goauthentik.io/install-config/install/docker-compose).
 
-## Create a new LXC container
+## Create the LXC container
 
-To create a new LXC with Docker installed, we will use the Docker [community script](https://community-scripts.org/scripts/docker) with custom parameters.
+Create a new LXC with Docker pre-installed using the [Docker community script](https://community-scripts.org/scripts/docker):
 
 ```bash
 var_cpu="2" var_ram="4096" var_disk="10" bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/docker.sh)"
 ```
 
 <Note>
-    Later migrate to custom silent install script with all parameters set to avoid user input. This will allow for a fully automated installation of authentik in the future.
+  In the future this will be replaced by a custom silent-install script with all parameters preset, enabling a fully automated Authentik deployment.
 </Note>
 
-## Setup authentik container
-
-Connect to the LXC container and create a new directory for authentik.
-
+## Set up the Authentik container
+Connect to the LXC and create a directory for Authentik:
 ```bash
-mkdir compose
-wget https://docs.goauthentik.io/compose.yml
+mkdir ~/compose && cd ~/compose
+wget https://docs.goauthentik.io/docker-compose.yml
 ```
 
-Create a new `.env` file with the following content:
-
+Create a .env file with the required secrets:
 ```bash
 echo "PG_PASS=$(openssl rand -base64 36 | tr -d '\n')" >> .env
 echo "AUTHENTIK_SECRET_KEY=$(openssl rand -base64 60 | tr -d '\n')" >> .env
@@ -38,13 +34,23 @@ echo "COMPOSE_PORT_HTTP=80" >> .env
 echo "COMPOSE_PORT_HTTPS=443" >> .env
 ```
 
-Start the authentik container with the following command:
-
+Pull and start the containers:
 ```bash
 docker compose pull
 docker compose up -d
-``` 
+```
 
-## Setup static IP address
+## Set a static IP address
+In OPNsense, create a static DHCP lease for the Authentik container. This ensures the container always receives the same IP address. Assign it a DNS hostname as well, for example auth.pve99.local.
 
-In OPNsense, create a static lease for the authentik container. This will ensure that the container always has the same IP address. Also assign it also a domain name.
+## First login
+Browse to the container IP or hostname. The default credentials are:
+
+- Username: akadmin
+- Password: Printed in the container logs on first start. Retrieve it with:
+
+```bash
+docker logs authentik-server 2>&1 | grep "Initial setup"
+```
+
+Change the password immediately after logging in.

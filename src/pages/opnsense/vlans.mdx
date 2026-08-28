@@ -1,3 +1,70 @@
-import {YouTube} from '@components/YouTube'
+import {YouTube} from "@/components/YouTube"
+import {Note, Warning} from "@/components/mdx"
 
-<YouTube id="5MY5FhMjs94" title="VLANs in OPNsense"/>
+export const description =
+  'Configure VLANs in OPNsense for network segmentation.'
+
+# VLANs
+
+VLANs segment the internal network so that management services, teachers, and different student year groups are isolated from each other. OPNsense handles all VLAN routing and firewall rules.
+
+<YouTube videoId="5MY5FhMjs94" title="VLANs in OPNsense" />
+
+## VLAN layout
+
+| VLAN ID | Name | Subnet | Purpose |
+|---------|------|--------|---------|
+| `10` | Management | `10.11.0.0/24` | Authentik, Postfix, infrastructure tools |
+| `101` | Lectors | `10.11.101.0/24` | Teacher workstations and servers |
+| `110` | sk25-26 | `10.11.110.0/24` | Student containers for 2025–2026 |
+| `120` | sk26-27 | `10.11.120.0/24` | Student containers for 2026–2027 |
+
+## Create a VLAN interface
+
+1. Go to **Interfaces → Other Types → VLAN**
+2. Click **Add**
+3. Set **Parent interface** to `vtnet1` (LAN)
+4. Set **VLAN tag** to the desired ID (e.g., `10`)
+5. Set **Description** (e.g., `Management`)
+6. Save and apply
+
+## Assign the interface
+
+1. Go to **Interfaces → Assignments**
+2. Select the new VLAN from the **New interface** dropdown
+3. Click **Add**
+4. Click the interface name to configure it:
+   - Enable the interface
+   - Set **Static IPv4** and enter the subnet gateway (e.g., `10.11.0.1/24` for VLAN 10)
+   - Save
+
+## Enable DHCP
+
+1. Go to **Services → ISC DHCPv4 → [VLAN name]**
+2. Check **Enable DHCP server on this interface**
+3. Set **Range**:
+   - VLAN 10: `10.11.0.10` to `10.11.0.250`
+   - VLAN 101: `10.11.101.10` to `10.11.101.250`
+   - VLAN 110: `10.11.110.10` to `10.11.110.250`
+   - VLAN 120: `10.11.120.10` to `10.11.120.250`
+4. Set **DNS servers** if needed (e.g., `8.8.8.8` or Authentik)
+5. Save
+
+## Firewall rules
+
+By default, traffic between VLANs is blocked. Create rules under **Firewall → Rules → [VLAN]** to allow what is needed:
+
+| Rule | Interface | Direction | Source | Destination | Action |
+|------|-----------|-----------|--------|-------------|--------|
+| Allow LAN to WAN | Any | out | VLAN subnet | any | Pass |
+| Allow mgmt to all | Management | out | `10.11.0.0/24` | any | Pass |
+| Allow lectors to students | Lectors | out | `10.11.101.0/24` | `10.11.110.0/24`, `10.11.120.0/24` | Pass |
+| Block students to mgmt | sk25-26 | out | `10.11.110.0/24` | `10.11.0.0/24` | Block |
+
+<Warning>
+  Keep the Management VLAN as restrictive as possible. Only infrastructure services and administrators should have access to it.
+</Warning>
+
+<Note>
+  When creating a new LXC or VM in Proxmox, remember to set the VLAN tag on the network device. OPNsense will then place the device in the correct subnet automatically.
+</Note>

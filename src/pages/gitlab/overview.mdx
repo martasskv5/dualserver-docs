@@ -1,7 +1,7 @@
-import {Note} from "@/components/mdx";
+import {Tiles} from "@/components/Tiles"
 
 export const description =
-    "What the GitLab integration looks like from a user's perspective"
+  'Overview of GitLab CE and how it integrates with Authentik for student and teacher collaboration.'
 
 # GitLab Overview
 
@@ -69,3 +69,25 @@ You can click **Leave group**, but the sync service will add you back within a f
 
 **Do I need a GitLab password?**
 No. You log in through Authentik every time. Your GitLab account is created automatically if it does not exist yet.
+
+<Tiles 
+  title="Guides" 
+  id="guides" 
+  items={[
+    {
+      href: '/gitlab/installation',
+      name: 'Install GitLab',
+      description: 'Deploy GitLab CE inside an LXC container.',
+    },
+    {
+      href: '/gitlab/configuration',
+      name: 'Initial Configuration',
+      description: 'First-login tasks and basic settings.',
+    },
+    {
+      href: '/authentik/gitlab-integration',
+      name: 'Authentik Integration',
+      description: 'Connect OIDC and enable group sync.',
+    },
+  ]} 
+/>

@@ -1,28 +1,39 @@
-import {Warning} from "@/components/mdx";
+import {Warning} from "@/components/mdx"
 
 export const description =
-    "Proxmox networking overview configuration guide"
+  'Proxmox networking overview and bridge configuration.'
 
 # Networking
 
-Whole networking is handled by [OPNsense](/opnsense/overview), but Proxmox has to provide underlying network interfaces to OPNsense. This is done by creating a Linux bridge in Proxmox and connecting it to the physical network interface. Then, the OPNsense VM will be connected to this bridge. This will be a WAN interface for OPNsense. For LAN we create additional bridge with VLANs enabled. All VMs and LXC containers will be connected to this LAN bridge. OPNsense will handle all routing and firewalling between WAN and LAN.
+All routing and firewalling is handled by [OPNsense](/opnsense/overview), but Proxmox must provide the underlying network interfaces. This is done by creating a Linux bridge connected to the physical network interface for WAN, and a second internal bridge for LAN traffic.
 
-| Bridge  | Purpose | Connected To                            |
-| ------- | ------- | --------------------------------------- |
-| `vmbr0` | WAN     | Physical network - should already exist |
-| `vmbr1` | LAN     | Internal — only VMs connect here        |
+| Bridge | Purpose | Connected To |
+|--------|---------|--------------|
+| `vmbr0` | WAN | Physical network — created automatically during Proxmox install |
+| `vmbr1` | LAN | Internal — only VMs and LXCs connect here |
 
-## Create LAN bridge
+## Create the LAN bridge
 
-Go to **Proxmox Web UI → Node → System → Network → Create → Linux Bridge**
+1. Go to **Proxmox Web UI → Node → System → Network → Create → Linux Bridge**
+2. Set **Name** to `vmbr1`
+3. Leave **Bridge ports** empty (no physical interface)
+4. Enable **VLAN aware** if the option is available
+5. Save and apply configuration
+
 <p>
     <img src="/docs-static/img/proxmox/networking/create-lan-bridge.png" alt="Create Linux Bridge" className="imagewrapper"/>
 </p>
 
-## Adding a new device to the internal network
+## Connect a VM or LXC to the internal network
 
-When creating a new VM or LXC container, select the LAN bridge `vmbr1` as the network device. This will connect the VM or LXC to the internal network. OPNsense will handle all routing and firewalling between WAN and LAN.
+When creating a new VM or LXC container:
+
+1. Under **Network Device**, set **Bridge** to `vmbr1`
+2. Set **Model** to `VirtIO` (VMs) or leave default (LXC)
+3. Add the correct **VLAN tag** for the target network segment
+
+OPNsense handles all routing, DHCP, and firewall rules between WAN and LAN.
 
 <Warning>
-    Dont forget to add a VLAN tag to the network device. This is required for OPNsense to handle VLANs properly. Otherwise, the VM or LXC will not be able to communicate with OPNsense and other devices on the internal network.
+  Do not forget to add a VLAN tag to the network device. OPNsense uses VLANs to segment the internal network. Without a tag, the device will not receive a DHCP lease and cannot communicate with other services.
 </Warning>

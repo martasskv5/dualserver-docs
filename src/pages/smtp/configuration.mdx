@@ -1,5 +1,48 @@
+import {Note} from "@/components/mdx"
+
 export const description =
-    'Postfix configuration guide'
+  'Basic Postfix configuration before enabling the external relay.'
 
-# Configuring Postfix
+# Configure Postfix
 
+## Set the hostname
+
+Ensure Postfix knows its own identity. Edit `/etc/postfix/main.cf` and verify or set:
+
+```ini
+myhostname = postfix.pve99.local
+mydomain = pve99.local
+myorigin = $mydomain
+```
+
+## Restrict relay access
+Only the internal network should be allowed to send mail through this server. In /etc/postfix/main.cf:
+```ini
+mynetworks = 127.0.0.0/8, 10.11.0.0/16
+inet_interfaces = all
+inet_protocols = ipv4
+```
+
+This allows any host on the 10.11.0.0/16 network (all VLANs) to relay mail.
+
+## Set the destination
+Because this server is a relay, not the final destination, limit local delivery:
+```ini
+mydestination = $myhostname, localhost.$mydomain, localhost
+```
+
+Apply changes
+
+```bash
+postfix reload
+```    
+
+Test local connectivity from another container:
+```bash
+telnet postfix.pve99.local 25
+```
+
+You should see the Postfix banner. Type quit to close.
+<Note>
+  At this stage Postfix only accepts mail from the internal network. It does not yet forward to Microsoft 365. Continue to the [Proxy guide](/smtp/proxy) to enable outbound relaying.
+</Note>

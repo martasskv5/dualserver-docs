@@ -1,24 +1,34 @@
+import {Note} from "@/components/mdx"
+
 export const description =
-    'SMTP installation and configuration guide'
+  'Install Postfix as an SMTP relay inside an LXC container.'
 
-# Installing Postfix
+# Install Postfix
 
-## Create a new LXC container
+## Create the LXC container
 
-Create a [LXC](/proxmox/create-lxc) container with the following parameters:
-- CPU: `1`
-- RAM: `512 MB`
-- Disk: `20 GB`
-- Network: `DHCP`
-- Interface: `vmbr1`
-- Vlan: `10`
-- Hostname: `postfix`
-- Feature: `nesting=1` (this is required for Gitlab to work properly in LXC)
-- Feature: `keyctl=1` (this is required for Gitlab to work properly in LXC)
+Create an LXC container with the following parameters:
 
-## Install Postfix package
+| Parameter | Value |
+|-----------|-------|
+| CPU | 1 core |
+| RAM | 512 MB |
+| Disk | 20 GB |
+| Network | DHCP on `vmbr1`, VLAN `10` |
+| Features | `nesting=1`, `keyctl=1` |
+| Hostname | `postfix` |
 
-Install Postfix using the following command:
+See [Create LXC](/proxmox/create-lxc) for the full procedure.
+
+<Note>
+  Place Postfix on VLAN 10 (Management) so every other VLAN can reach it, but students cannot access it directly.
+</Note>
+
+## Install Postfix
+
+Inside the container:
+
 ```bash
 apt update && apt install -y postfix libsasl2-modules
 ```
+During installation, select **Internet Site** and set the system mail name to your domain (e.g., pve99.local).

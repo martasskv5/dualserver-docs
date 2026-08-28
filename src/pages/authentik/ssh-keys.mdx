@@ -1,38 +1,50 @@
+import {Note} from "@/components/mdx"
+
 export const description =
-    "Managing public SSH keys in Authentik for the LXC access and GitLab"
+  'Manage public SSH keys in Authentik for LXC access and GitLab.'
 
-# Managing public SSH keys in Authentik for the LXC access, GitLab and other services
+# Managing Public SSH Keys in Authentik
 
-By utilizing authentik as your *Single Source of Truth (SSOT)*, we eliminate the friction of managing keys across separate infrastructure silos.
+By utilizing Authentik as your single source of truth for public keys, you eliminate the friction of managing keys across separate infrastructure silos.
 
-## Step 1: Create the SSH Key Object Attribute
-Defining an Object Attribute tells authentik to expect this specific data format and adds it natively to user objects. 
-1. Log into your authentik Admin Interface.
-2. Navigate to System ➡️ Object attributes.
-3. Click Create and set the following parameters:
-    - Name: `SSH Public Key`
-    - Key: `ssh_public_key` (This dictates the exact attribute name: attributes.ssh_public_key)
-    - Type: `Text (Multilines)` (Crucial because SSH keys are long and shouldn't be cut off)
-    - Attribute is unique: `True` (This prevents duplicate keys across users)
-4. Save the attribute.
+## Step 1: Create the SSH key object attribute
 
-## Step 2: Create a Prompt for the User Form
-Next, you need to design the input field that the user actually interacts with.
-1. Navigate to Flows and Stages ➡️ Stages.
-2. Click Create and select Prompt Stage.
-3. Name it something like user-profile-ssh-prompt.
-4. In the Fields section, click Create field:
-    - Field Key: `attributes.ssh_public_key` (The attributes. prefix forces the input to save directly to the user's metadata)
-    - Label: `Your SSH Public Key`
-    - Type: `Text (Multilines)`
-    - Interpret initial value as expression: `True` (This allows the field to pre-populate with any existing key the user has already saved)
-    - Initial value expression: `return user.attributes.get('ssh_public_key', '')` (This expression fetches the current value of the user's SSH key, if any)
-5. Save the field and the stage.
+Defining an object attribute tells Authentik to expect this specific data format and adds it natively to user objects.
 
-## Step 3: Add the Prompt to a Flow
-To make this accessible to the user, you must append this stage to a flow they can run (such as a custom user settings or profile update flow).
-1. Go to Flows and Stages ➡️ Flows.
-2. Select your default or custom user profile/settings flow (often structured around a "User Settings" dashboard application).
-3. Bind your newly created user-profile-ssh-prompt stage to that flow.
+1. Log into your Authentik admin interface
+2. Navigate to **System → Object attributes**
+3. Click **Create** and set the following:
+   - **Name**: `SSH Public Key`
+   - **Key**: `ssh_public_key` (This dictates the exact attribute name: `attributes.ssh_public_key`)
+   - **Type**: `Text (Multilines)` (Crucial because SSH keys are long and should not be cut off)
+   - **Attribute is unique**: `True` (Prevents duplicate keys across users)
+4. Save the attribute
 
-Once saved, any user executing that flow will be presented with a text box where they can paste or update their public SSH key. It will save directly to their authentik identity object.
+## Step 2: Create a prompt for the user form
+
+Next, design the input field that the user actually interacts with.
+
+1. Navigate to **Flows and Stages → Stages**
+2. Click **Create** and select **Prompt Stage**
+3. Name it `user-profile-ssh-prompt`
+4. In the **Fields** section, click **Create field**:
+   - **Field Key**: `attributes.ssh_public_key` (The `attributes.` prefix forces the input to save directly to the user's metadata)
+   - **Label**: `Your SSH Public Key`
+   - **Type**: `Text (Multilines)`
+   - **Interpret initial value as expression**: `True` (Allows the field to pre-populate with any existing key)
+   - **Initial value expression**: `return user.attributes.get('ssh_public_key', '')`
+5. Save the field and the stage
+
+## Step 3: Add the prompt to a flow
+
+To make this accessible to the user, append this stage to a flow they can run (such as a custom user settings or profile update flow).
+
+1. Go to **Flows and Stages → Flows**
+2. Select your default or custom user profile/settings flow
+3. Bind your newly created `user-profile-ssh-prompt` stage to that flow
+
+Once saved, any user executing that flow will be presented with a text box where they can paste or update their public SSH key. It will save directly to their Authentik identity object.
+
+<Note>
+  The LXC login system can read this key via a custom script and present it to SSH through `AuthorizedKeysCommand`. See the [LDAP integration guide](/authentik/ldap-integration) for details.
+</Note>

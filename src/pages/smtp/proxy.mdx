@@ -1,24 +1,24 @@
+import {Note} from "@/components/mdx"
+
 export const description =
-    'Postfix as proxy in development environment'
+  'Configure Postfix to relay outbound mail through Microsoft 365.'
 
 # Postfix as a Proxy
 
-In development environments, it is common to use a local SMTP server as a proxy to forward emails to an external SMTP server. This allows to test email functionality in isolated environments.
+In development environments, it is common to use a local SMTP server as a proxy to forward emails to an external SMTP server. This allows you to test email functionality in isolated environments.
 
-As external SMTP server, we will use the Microsoft 365 SMTP server. The following configuration will be used:
+As the external SMTP server, we use the Microsoft 365 SMTP server.
 
-`/etc/postfix/main.cf`
-```
-# See /usr/share/postfix/main.cf.dist for a commented, more complete version
+## Main configuration
 
+Edit `/etc/postfix/main.cf`:
+
+```ini
 smtpd_banner = $myhostname ESMTP $mail_name (Debian/GNU)
 biff = no
 
-# appending .domain is the MUA's job.
+# Appending .domain is the MUA's job.
 append_dot_mydomain = no
-
-# Uncomment the next line to generate "delayed mail" warnings
-#delay_warning_time = 4h
 
 alias_maps = hash:/etc/aliases
 alias_database = hash:/etc/aliases
@@ -37,16 +37,46 @@ smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
 smtp_sasl_security_options = noanonymous
 smtp_sasl_tls_security_options = noanonymous
 
-# Network Access Control: Only allow your internal Proxmox subnet
-# Replace with your actual virtual bridge subnet
-mynetworks = 127.0.0.0/8, 172.17.34.0/24
+# Network access control: only allow your internal Proxmox subnet
+mynetworks = 127.0.0.0/8, 10.11.0.0/16
 
 inet_interfaces = all
 inet_protocols = ipv4
 smtp_sasl_mechanism_filter = plain, login
 ```
 
-`/etc/postfix/sasl_passwd`
+## SASL password map
+Create `/etc/postfix/sasl_passwd`:
+
 ```
 [smtp.office365.com]:587 your-email@your-domain.onmicrosoft.com:your-password
 ```
+
+Secure the file and build the hash database:
+```bash
+chmod 600 /etc/postfix/sasl_passwd
+postmap /etc/postfix/sasl_passwd
+```
+
+## Apply and test
+Reload Postfix:
+
+```bash
+postfix reload
+```
+
+Send a test message from the shell:
+
+```bash
+echo "Test body" | mail -s "Test subject" your-test-address@example.com
+```
+
+Check the mail queue if the message does not arrive immediately:
+
+```bash
+mailq
+```
+
+<Note>
+  If Microsoft 365 rejects the sender address, ensure the `From` address matches the account configured in `sasl_passwd`. Some services require the envelope sender to be authorized.
+</Note>

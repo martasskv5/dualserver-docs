@@ -1,0 +1,56 @@
+import {Tiles} from "@/components/Tiles"
+
+export const description =
+  'Overview of OPNsense as the firewall, router, and VLAN manager.'
+
+# OPNsense Overview
+
+OPNsense is the central gateway for the entire DualServer environment. It routes traffic between the physical network and the internal virtual network, segments traffic with VLANs, and provides DHCP and DNS for every VM and LXC container.
+
+## What OPNsense handles
+
+| Responsibility | Details |
+|----------------|---------|
+| **WAN routing** | Connects the physical network to the internal virtual network |
+| **LAN DHCP** | Assigns IP addresses to every device on `vmbr1` |
+| **VLAN segmentation** | Separates management, lectors, and student year groups |
+| **Firewall rules** | Controls which VLANs can talk to each other and to WAN |
+| **DNS forwarding** | Resolves internal hostnames and forwards external queries |
+
+## VLAN layout
+
+| VLAN | Name | Subnet | Purpose |
+|------|------|--------|---------|
+| `10` | Management | `10.11.0.0/24` | Authentik, Postfix, infrastructure |
+| `101` | Lectors | `10.11.101.0/24` | Teacher workstations |
+| `110` | sk25-26 | `10.11.110.0/24` | Student containers for 2025–2026 |
+| `120` | sk26-27 | `10.11.120.0/24` | Student containers for 2026–2027 |
+
+## How to use this section
+
+| Page | Purpose |
+|------|---------|
+| [Installation](/opnsense/installation) | Deploy OPNsense as a VM on Proxmox |
+| [VLANs](/opnsense/vlans) | Configure VLAN interfaces, DHCP ranges, and firewall rules |
+
+<Tiles 
+  title="Next Steps" 
+  id="next-steps" 
+  items={[
+    {
+      href: '/opnsense/installation',
+      name: 'Install OPNsense',
+      description: 'Create the OPNsense VM and run the setup wizard.',
+    },
+    {
+      href: '/opnsense/vlans',
+      name: 'Configure VLANs',
+      description: 'Set up the VLANs that segment the internal network.',
+    },
+    {
+      href: '/proxmox/networking',
+      name: 'Proxmox Networking',
+      description: 'Create the LAN bridge that OPNsense uses.',
+    },
+  ]} 
+/>

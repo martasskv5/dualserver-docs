@@ -1,10 +1,45 @@
+import {Note} from "@/components/mdx"
+
 export const description =
-    "Initial Gitlab configuration"
+  'Initial GitLab configuration after installation.'
 
 # Initial Configuration
 
 ## First login
 
-Login to Gitlab using these credentials:
-- Username: `root`
-- Password: Get from `/etc/gitlab/initial_root_password`
+Browse to the GitLab instance and log in with these credentials:
+
+- **Username**: `root`
+- **Password**: Retrieved from the container:
+
+```bash
+cat /etc/gitlab/initial_root_password
+```
+
+Change the root password immediately after logging in.
+
+## Basic settings
+
+1. Go to Admin Area → Settings → General
+2. Set the Account and limit settings:
+    - Default projects limit: 50 (or your preferred limit)
+    - Default snippet visibility: Internal
+    - Default group visibility: Internal
+3. Under Sign-up restrictions:
+    - Disable sign-up if all users come through Authentik
+    - Disable sign-in with standard authentication if you want to force OIDC
+4. Save the changes
+
+## Configure the hostname
+Ensure the external URL is correct in /etc/gitlab/gitlab.rb:
+```ruby
+external_url 'https://git.pve99.internal'
+```
+
+Then reconfigure:
+```bash
+gitlab-ctl reconfigure
+```
+
+Next steps
+Continue to the Authentik integration guide to enable single sign-on and automatic group provisioning.

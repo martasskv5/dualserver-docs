@@ -1,0 +1,47 @@
+import {Note} from "@/components/mdx"
+
+export const description =
+  'Create a new application and provider in Authentik.'
+
+# Create a New Application
+
+Most services that integrate with Authentik need two objects: a **Provider** (the protocol configuration) and an **Application** (the user-facing entry that binds to the provider).
+
+## Create a provider
+
+1. Go to **Applications → Providers → Create**
+2. Select the provider type:
+   - **OAuth2/OpenID** for web applications like GitLab
+   - **LDAP** for directory services and SSH logins
+   - **Proxy** for forward-auth with reverse proxies
+3. Fill in the required fields:
+   - **Name**: A descriptive name (e.g., `GitLab OIDC`)
+   - **Client type**: `Confidential` for server-side apps, `Public` for SPAs
+   - **Redirect URIs**: The callback URL of the target service
+4. Save and copy the **Client ID** and **Client Secret**
+
+## Create an application
+
+1. Go to **Applications → Applications → Create**
+2. Set the following:
+   - **Name**: The display name users see (e.g., `GitLab`)
+   - **Slug**: A short identifier, usually lowercase (e.g., `gitlab`)
+   - **Provider**: Select the provider you just created
+3. Save
+
+## Configure bindings (optional)
+
+If you want to restrict who can see or use this application:
+
+1. Open the application
+2. Go to the **Policy / Group / User Bindings** tab
+3. Add bindings for:
+   - Specific users
+   - Groups (e.g., `Lectors`, `Students`)
+   - Policies
+
+Without bindings, all authenticated users can access the application.
+
+<Note>
+  Some providers require additional configuration before they work. For example, an OIDC provider needs a property mapping to send the correct group claims. See the service-specific integration guides for details.
+</Note>

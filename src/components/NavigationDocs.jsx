@@ -74,6 +74,10 @@ export const docsNavigation = [
             {
                 title: "Installation",
                 href: "/opnsense/installation",
+            },
+            {
+                title: "VLANs",
+                href: "/opnsense/vlans",
             }
         ]
     },

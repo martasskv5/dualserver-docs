@@ -1,7 +1,7 @@
-import {Note} from "@/components/mdx";
+import {Note} from "@/components/mdx"
 
 export const description =
-    "GitLab CE integration guide for Authentik with automatic group and user provisioning"
+  'GitLab CE integration guide for Authentik with automatic group and user provisioning.'
 
 # GitLab CE + Authentik Integration
 
@@ -12,14 +12,14 @@ This guide covers setting up OIDC authentication between Authentik and GitLab Co
 | Component | Purpose |
 |-----------|---------|
 | **Authentik OIDC Provider** | Handles user authentication, emits custom group claims |
-| **GitLab OmniAuth** | Accepts OIDC logins, creates/links user accounts |
+| **GitLab OmniAuth** | Accepts OIDC logins, creates or links user accounts |
 | **Sync Service** | Runs alongside Authentik, provisions GitLab groups and memberships automatically |
 
 ---
 
-## Authentik Configuration
+## Authentik configuration
 
-### 1. Create a Property Mapping
+### 1. Create a property mapping
 
 Go to **Customization → Property Mappings → Create → Scope Mapping**
 
@@ -57,59 +57,47 @@ return {
 
 This mapping transforms your Authentik hierarchy into flat group names that the sync service consumes:
 
-| User's Groups | Emitted Claim |
-|---------------|---------------|
-| `Lectors`, `sk25-26` | `sk25-26-lectors` |
+| User's Groups         | Emitted Claim      |
+| --------------------- | ------------------ |
+| `Lectors`, `sk25-26`  | `sk25-26-lectors`  |
 | `Students`, `sk25-26` | `sk25-26-students` |
-| `Lectors`, `sk26-27` | `sk26-27-lectors` |
+| `Lectors`, `sk26-27`  | `sk26-27-lectors`  |
 
 <Note>
   The `groups` claim is used by the sync service, **not** by GitLab CE directly. GitLab CE ignores OIDC group claims — that is why the sync service is required.
 </Note>
 
-### 2. Create an OIDC Provider
+### 2. Create an OIDC provider
+Go to Applications → Providers → Create
+| Tab                            | Field              | Value                                                           |
+| ------------------------------ | ------------------ | --------------------------------------------------------------- |
+| **General**                    | Name               | `GitLab OIDC`                                                   |
+|                                | Authorization flow | `default-provider-authorization-explicit-consent`               |
+|                                | Client type        | `Confidential`                                                  |
+|                                | Client ID          | *auto-generated — copy it*                                      |
+|                                | Client Secret      | *auto-generated — copy it*                                      |
+|                                | Redirect URIs      | `https://git.yourdomain.com/users/auth/openid_connect/callback` |
+| **Advanced protocol settings** | Scopes             | Add `gitlab_groups` (your custom scope)                         |
+|                                | Subject mode       | `Based on the User's UUID` (recommended)                        |
+|                                | Issuer mode        | `Same identifier is used for all providers`                     |
 
-Go to **Applications → Providers → Create**
+### 3. Create an application
 
-| Tab | Field | Value |
-|-----|-------|-------|
-| **General** | Name | `GitLab OIDC` |
-| | Authorization flow | `default-provider-authorization-explicit-consent` |
-| | Client type | `Confidential` |
-| | Client ID | *auto-generated — copy it* |
-| | Client Secret | *auto-generated — copy it* |
-| | Redirect URIs | `https://git.yourdomain.com/users/auth/openid_connect/callback` |
-| **Advanced protocol settings** | Scopes | Add `gitlab_groups` (your custom scope) |
-| | Subject mode | `Based on the User's UUID` (recommended) |
-| | Issuer mode | `Same identifier is used for all providers` |
-
-Make sure these scopes are included: `openid`, `profile`, `email`, `gitlab_groups`.
-
-### 3. Create an Application
-
-Go to **Applications → Applications → Create**
-
-| Field | Value |
-|-------|-------|
-| Name | `GitLab` |
-| Slug | `gitlab` |
+Go to Applications → Applications → Create
+| Field    | Value         |
+| -------- | ------------- |
+| Name     | `GitLab`      |
+| Slug     | `gitlab`      |
 | Provider | `GitLab OIDC` |
 
----
-
-## GitLab Configuration
-
+## GitLab configuration
 Edit `/etc/gitlab/gitlab.rb`:
 
 ```ruby
 gitlab_rails['omniauth_enabled'] = true
 gitlab_rails['omniauth_allow_single_sign_on'] = ['openid_connect']
-# Allow OIDC to link to existing users by email
 gitlab_rails['omniauth_auto_link_user'] = ['openid_connect']
-
-# Optional but recommended: also allow linking by username
 gitlab_rails['omniauth_auto_link_openid_connect_user'] = true
-
 gitlab_rails['omniauth_block_auto_created_users'] = false
 gitlab_rails['omniauth_auto_link_ldap_user'] = false
 gitlab_rails['omniauth_auto_link_saml_user'] = false
@@ -146,44 +134,39 @@ Then reconfigure:
 gitlab-ctl reconfigure
 ```
 
----
-
-## Group Sync Service
-
+## Group sync service
 GitLab CE cannot sync groups from an OIDC provider. The sync service bridges this gap by reading Authentik's API and mirroring users, groups, and memberships into GitLab.
 
 ### What it does
 
 1. Fetches all users and groups from Authentik
-2. Determines role: **Lector** → `Maintainer`, **Student** → `Developer`
-3. Creates year groups (`sk25-26`, `sk26-27`, etc.) as top-level GitLab groups
-4. **Pre-provisions GitLab accounts** for users who haven't logged in yet
+2. Determines role: Lector → Maintainer, Student → Developer
+3. Creates year groups (sk25-26, sk26-27, etc.) as top-level GitLab groups
+4. Pre-provisions GitLab accounts for users who have not logged in yet
 5. Adds members with the correct access level
 6. Removes members who no longer belong
-7. Forces any **Private** projects to **Internal** visibility
+7. Forces any Private projects to Internal visibility
 
 ### Role mapping
+| Authentik membership    | GitLab role         | Permissions                                                                         |
+| ----------------------- | ------------------- | ----------------------------------------------------------------------------------- |
+| `Lectors` + year group  | **Maintainer** (40) | Full access to all repos in the year group, can manage group settings, merge any MR |
+| `Students` + year group | **Developer** (30)  | Can push code, create repos, invite other students (up to Developer)                |
 
-| Authentik membership | GitLab role | Permissions |
-|----------------------|-------------|-------------|
-| `Lectors` + year group | **Maintainer** (40) | Full access to all repos in the year group, can manage group settings, merge any MR |
-| `Students` + year group | **Developer** (30) | Can push code, create repos, invite other students (up to Developer), fork |
-
----
-
-## Sync Service Setup
+## Sync service setup
 
 ### 1. Create API tokens
+Authentik token:
 
-**Authentik token:**
-- Go to **Directory → Tokens & App passwords**
+- Go to Directory → Tokens & App passwords
 - Create a token for a service account (or admin)
 - Copy the value
 
-**GitLab token:**
-- Go to **Admin Area → Access → Personal Access Tokens**
-- Click **Generate token → Legacy token**
-- Select **`api`** scope
+GitLab token:
+
+- Go to Admin Area → Access → Personal Access Tokens
+- Click Generate token → Legacy token
+- Select api scope
 - Copy the value immediately
 
 <Note>
@@ -191,28 +174,21 @@ GitLab CE cannot sync groups from an OIDC provider. The sync service bridges thi
 </Note>
 
 ### 2. Add tokens to your environment
-
-In your `.env` file (next to `docker-compose.yml`):
-
+In your .env file (next to docker-compose.yml):
 ```bash
 AUTHENTIK_API_TOKEN=your-authentik-token-here
 GITLAB_API_TOKEN=your-gitlab-token-here
 ```
 
 ### 3. Add the sync service
-
-Create a folder next to your `docker-compose.yml`:
-
+Create a folder next to your docker-compose.yml:
 ```
 ├── docker-compose.yml
 └── authentik-gitlab-sync/
     ├── Dockerfile
     └── sync.py
 ```
-
-Download the `sync.py` script from [here](/docs-static/files/sync.py) and place it in the `authentik-gitlab-sync` folder.
-
-**`Dockerfile`**
+Download the sync.py script from [here](/docs-static/files/sync.py) and place it in the authentik-gitlab-sync folder.
 
 ```dockerfile
 FROM python:3.12-slim
@@ -226,7 +202,7 @@ RUN chmod +x /app/sync.py
 CMD ["python", "/app/sync.py"]
 ```
 
-Add this service to your `docker-compose.yml`:
+Add this service to your docker-compose.yml:
 
 ```yaml
   gitlab-sync:
@@ -240,46 +216,35 @@ Add this service to your `docker-compose.yml`:
       AUTHENTIK_TOKEN: "${AUTHENTIK_API_TOKEN}"
       GITLAB_URL: "https://git.pve99.internal"
       GITLAB_TOKEN: "${GITLAB_API_TOKEN}"
-      GITLAB_VERIFY_SSL: "false"   # Set to "true" if using a trusted CA
-      SYNC_INTERVAL: "300"         # Seconds between syncs (300 = 5 min)
-      DRY_RUN: "false"             # Set to "true" to preview changes
+      GITLAB_VERIFY_SSL: "false"
+      SYNC_INTERVAL: "300"
+      DRY_RUN: "false"
     networks:
       - authentik
-    # If GitLab is outside the Docker network, you may need:
-    # extra_hosts:
-    #   - "git.pve99.internal:192.168.x.x"
 ```
 
 ### 4. Start the service
-
 ```bash
 docker compose up -d --build gitlab-sync
 docker logs -f authentik-gitlab-sync
 ```
 
----
-
-## Group Structure
-
+## Group structure
 Your Authentik groups should look like this:
-
-| Group | Type | Purpose |
-|-------|------|---------|
-| `Lectors` | Parent | Role marker — members are treated as managers |
+| Group      | Type   | Purpose                                            |
+| ---------- | ------ | -------------------------------------------------- |
+| `Lectors`  | Parent | Role marker — members are treated as managers      |
 | `Students` | Parent | Role marker — members are treated as regular users |
-| `sk25-26` | Year | Students and lectors assigned to this year |
-| `sk26-27` | Year | Students and lectors assigned to this year |
+| `sk25-26`  | Year   | Students and lectors assigned to this year         |
+| `sk26-27`  | Year   | Students and lectors assigned to this year         |
 
 When a lector changes year groups, simply move them in Authentik. The next sync run updates GitLab automatically.
-
----
 
 ## Troubleshooting
 
 ### SSL certificate verification failed
 
-If GitLab uses a self-signed or internal CA certificate, set `GITLAB_VERIFY_SSL: "false"` in the compose file.
-
+If GitLab uses a self-signed or internal CA certificate, set GITLAB_VERIFY_SSL: "false" in the compose file.
 To use proper verification instead, mount your CA bundle:
 
 ```yaml
@@ -292,19 +257,19 @@ environment:
 
 ### 401 Unauthorized from GitLab
 
-- Ensure the token is a **Legacy** token with **`api`** scope
-- The token owner must be a **GitLab admin**
+- Ensure the token is a Legacy token with api scope
+- The token owner must be a GitLab admin
 - Verify the token is copied correctly (no extra spaces or quotes)
 
 ### "User not found in GitLab yet"
 
 If you see this message, the sync service is not creating users. Check that:
 - The GitLab token has admin privileges
-- The `create_user` API call is not failing (check logs for error details)
+- The create_user API call is not failing (check logs for error details)
 
 ### Users can create private repos
 
-The sync service enforces **Internal** visibility on all projects in year groups during each sync cycle. If a student creates a private repo, it will be flipped to Internal on the next run.
+The sync service enforces Internal visibility on all projects in year groups during each sync cycle. If a student creates a private repo, it will be flipped to Internal on the next run.
 
 ### Sync not picking up changes immediately
 

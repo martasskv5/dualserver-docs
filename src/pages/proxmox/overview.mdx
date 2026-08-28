@@ -1,0 +1,52 @@
+import {Tiles} from "@/components/Tiles"
+
+export const description =
+  'Overview of the Proxmox hypervisor and its role in the DualServer environment.'
+
+# Proxmox Overview
+
+Proxmox VE is the hypervisor that runs every virtual machine and LXC container in the DualServer environment. It provides the compute, storage, and network bridges that all other services depend on.
+
+## What Proxmox handles
+
+| Responsibility | Details |
+|----------------|---------|
+| **Virtual machines** | OPNsense runs as a VM with dedicated network devices |
+| **LXC containers** | Authentik, GitLab, Postfix, and student servers run in unprivileged LXCs |
+| **Storage** | Local ZFS pools hold ISO images, templates, and container rootfs |
+| **Network bridges** | `vmbr0` connects to the physical network; `vmbr1` is the internal LAN |
+| **Templates** | A single Debian 13 LXC template is prepared with LDAP and SSH pre-configured |
+
+## Architecture
+
+The physical server runs Proxmox. OPNsense is the first VM created and owns the routing between the physical network and the internal virtual network. Every other service lives behind OPNsense on `vmbr1` with a VLAN tag that places it in the correct segment.
+
+## How to use this section
+
+| Page | Purpose |
+|------|---------|
+| [Installation](/proxmox/installation) | Install Proxmox VE on the bare-metal server |
+| [Networking](/proxmox/networking) | Create bridges and understand the WAN/LAN split |
+| [Create LXC](/proxmox/create-lxc) | Deploy a new container from the standard template |
+
+<Tiles 
+  title="Next Steps" 
+  id="next-steps" 
+  items={[
+    {
+      href: '/proxmox/installation',
+      name: 'Install Proxmox',
+      description: 'Step-by-step installation on bare metal.',
+    },
+    {
+      href: '/proxmox/networking',
+      name: 'Networking',
+      description: 'Set up vmbr0 and vmbr1 before creating any VMs.',
+    },
+    {
+      href: '/opnsense/installation',
+      name: 'Install OPNsense',
+      description: 'Deploy the firewall VM after Proxmox is ready.',
+    },
+  ]} 
+/>

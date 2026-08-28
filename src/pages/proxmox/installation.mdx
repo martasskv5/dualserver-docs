@@ -1,0 +1,56 @@
+import {Note} from "@/components/mdx"
+
+export const description =
+  'Install Proxmox VE on bare metal.'
+
+# Install Proxmox VE
+
+## Download the ISO
+
+- Go to [https://www.proxmox.com/en/downloads](https://www.proxmox.com/en/downloads)
+- Download the latest **Proxmox VE ISO Installer**
+- Write the ISO to a USB drive with your preferred tool (e.g., Rufus, Ventoy, or `dd`)
+
+## Hardware requirements
+
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| CPU | 64-bit x86_64 with virtualization extensions (Intel VT-x/AMD-V) | 4+ cores |
+| RAM | 4 GB | 16+ GB |
+| Storage | 32 GB | 128+ GB SSD |
+| Network | 1 NIC | 2+ NICs for separation |
+
+## Install
+
+1. Boot the target machine from the USB drive
+2. Select **Install Proxmox VE** from the boot menu
+3. Accept the EULA
+4. Choose the target disk for installation
+5. Set your **country, timezone, and keyboard layout**
+6. Set a strong **root password** and enter an **admin email**
+7. Configure network settings:
+   - **Management interface**: Select the primary NIC
+   - **Hostname**: `pve99.local` (or your preferred FQDN)
+   - **IP address**: Static, e.g., `192.168.1.99/24`
+   - **Gateway**: Your physical router, e.g., `192.168.1.1`
+   - **DNS server**: `8.8.8.8` or your router
+8. Confirm and wait for the installation to finish
+9. Reboot and remove the USB drive
+
+## First login
+
+Browse to the Proxmox web UI:
+`https://192.168.1.99:8006`
+
+
+Login as `root` with the password you set during installation.
+
+<Note>
+  The default bridge `vmbr0` is created automatically and bound to the physical NIC. This bridge is used as the WAN interface for OPNsense later.
+</Note>
+
+## Post-installation checklist
+
+- [ ] Verify that `vmbr0` exists under **Node → System → Network**
+- [ ] Upload the OPNsense ISO to **local → ISO Images**
+- [ ] Upload the Debian 13 LXC template to **local → CT Templates** (or download via the GUI)

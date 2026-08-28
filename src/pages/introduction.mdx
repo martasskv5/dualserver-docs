@@ -1,112 +1,64 @@
 import {Note} from "@/components/mdx"
 import {Tiles} from "@/components/Tiles"
-import {YouTube} from "@/components/YouTube"
 import {Button} from "@/components/Button"
 
 export const description =
-  'Learn everything there is to know about NetBird.'
+  'Documentation for the DualServer homelab environment — Proxmox, OPNsense, Authentik, GitLab, and SMTP.'
 
-# Introduction to NetBird
+# DualServer Documentation
 
-<YouTube videoId="CFa7SY4Up9k" />
-
-NetBird is an Open Source Zero Trust Networking platform that allows you to create secure private networks for your
-organization or home. We designed NetBird to be simple and fast, requiring near-zero configuration effort and leaving
-behind the hassle of opening ports, complex firewall rules, VPN gateways, etc.
-
-<Note>
-    NetBird is an **[open-source](https://github.com/netbirdio/netbird)** project and can be self-hosted.
-    See a comparison between the self-hosted and cloud-hosted versions [here](/about-netbird/self-hosted-vs-cloud).
-</Note>
-
-There is no centralized VPN server with NetBird - your computers, devices, machines, and servers connect to each other directly over a fast encrypted tunnel.
-It creates a high-performance point-to-point [WireGuard®](https://www.wireguard.com/) overlay network that connects machines running anywhere in just a few clicks.
-
-It literally takes less than 5 minutes to deploy a secure point-to-point VPN with NetBird.
+This documentation covers the complete setup of the DualServer homelab environment. Everything is designed around a small number of core principles: every service runs in its own container or virtual machine, the network is segmented with VLANs, and Authentik handles identity for every system that supports it.
 
 <div className="not-prose mb-16 mt-6 flex gap-3">
-  <Button href="https://app.netbird.io/install" arrow="right" children="Try NetBird Cloud" />
-  <Button href="/selfhosted/selfhosted-quickstart" variant="outline-arrow" arrow="right" children="Deploy NetBird Self-Hosted" />
+  <Button href="/proxmox/overview" arrow="right" children="Start with Proxmox" />
+  <Button href="/authentik/overview" variant="outline-arrow" arrow="right" children="Explore Authentik" />
 </div>
 
 <Tiles 
-  title="Guides" 
-  id="guides" 
+  title="Infrastructure" 
+  id="infrastructure" 
   items={[
     {
-      href: '/get-started',
-      name: 'Onboarding Guide',
-      description: 'Get started with NetBird in under 5 minutes. Learn the basics of installation and setup.',
+      href: '/proxmox/overview',
+      name: 'Proxmox',
+      description: 'The hypervisor that runs every VM and LXC container in the environment.',
     },
     {
-      href: '/selfhosted/selfhosted-quickstart',
-      name: 'Self-Host NetBird',
-      description: 'Get started with self-hosted NetBird in 5 minutes. Learn how to deploy and configure your own NetBird instance.',
+      href: '/opnsense/overview',
+      name: 'OPNsense',
+      description: 'Firewall, router, and VLAN manager that handles all network traffic.',
     },
     {
-      href: '/manage/access-control/manage-network-access',
-      name: 'Manage Network Access',
-      description:
-          'Learn how to use access control policies to manage and secure access to your machines and resources.',
+      href: '/proxmox/networking',
+      name: 'Networking',
+      description: 'How Proxmox bridges and OPNsense VLANs work together.',
     },
     {
-      href: '/manage/team/add-users-to-your-network',
-      name: 'Add Users to Your Network',
-      description: 'Discover how to add team members to your NetBird network and manage user access.',
-    },
-    {
-      href: '/manage/network-routes',
-      name: 'Route Traffic to Private Networks',
-      description:
-        'Learn how to provide secure access to LANs, VPS instances, and corporate private networks.',
-    },
-    {
-      href: '/use-cases/remote-access/exit-nodes',
-      name: 'Configure Default Routes',
-      description: 'Set up default routes for internet traffic and configure exit nodes for your network.',
-    },
-    {
-      href: '/manage/activity/traffic-events-logging',
-      name: 'Log and Monitor Network Activity',
-      description:
-        'Learn how to track and monitor system and network activities in your NetBird account.',
-    },
-    {
-      href: '/manage/dns',
-      name: 'Manage DNS in Your Network',
-      description:
-          'Configure custom name servers and DNS settings for your private network.',
+      href: '/proxmox/create-lxc',
+      name: 'Create LXC Containers',
+      description: 'Standard procedure for creating new LXC containers on Proxmox.',
     },
   ]} 
 />
 
 <Tiles 
-  title="About NetBird" 
-  id="about-netbird" 
+  title="Services" 
+  id="services" 
   items={[
     {
-      href: '/about-netbird/how-netbird-works',
-      name: 'How NetBird Works',
-      description: 'Learn about NetBird concepts, architecture, protocols, and how it creates secure networks.',
+      href: '/authentik/overview',
+      name: 'Authentik',
+      description: 'Single sign-on, user management, and LDAP for all services.',
     },
     {
-      href: '/about-netbird/netbird-vs-traditional-vpn',
-      name: 'NetBird vs. Traditional VPN',
-      description:
-        'Discover how NetBird compares to traditional VPNs, why it uses WireGuard, and the advantages of Zero Trust networking.',
+      href: '/gitlab/overview',
+      name: 'GitLab',
+      description: 'Code hosting, assignments, and collaboration for students and teachers.',
     },
     {
-      href: '/about-netbird/self-hosted-vs-cloud',
-      name: 'Self-Hosted vs. Cloud',
-      description:
-        'Compare NetBird Cloud with the self-hosted version and decide which deployment fits your needs.',
-    },
-    {
-      href: '/manage/peers/browser-client/architecture',
-      name: 'Browser Client Architecture',
-      description:
-        'Understand how the Browser Client enables secure remote access directly from web browsers using WebAssembly.',
+      href: '/smtp/overview',
+      name: 'SMTP',
+      description: 'Postfix mail relay for notifications and outbound email.',
     },
   ]} 
 />
-

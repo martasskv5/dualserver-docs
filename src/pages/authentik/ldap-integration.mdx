@@ -1,27 +1,30 @@
+import {Note} from "@/components/mdx"
+
 export const description =
-    "How to set up the LDAP integration in Authentik for the LXC access"
+  'Set up LDAP integration in Authentik for Proxmox LXC container access.'
 
 # Authentik LDAP Integration for Proxmox LXC Containers
 
 ## Overview
 
-This guide covers integrating **authentik** with **Debian 13 LXC containers** on Proxmox for OS-level user authentication via SSH. Users log in with their authentik username and password as if the LXC were a normal Linux server.
+This guide covers integrating **Authentik** with **Debian 13 LXC containers** on Proxmox for OS-level user authentication via SSH. Users log in with their Authentik username and password as if the LXC were a normal Linux server.
 
 ### Why LDAP and not the authentik-agent?
 
-The native `authentik-agent` (`libpam-authentik`) requires an **Enterprise License** for password-based Linux logins. The free and open-source alternative is the **authentik LDAP Outpost** paired with standard Linux NSS/PAM LDAP clients (`libnss-ldapd`, `libpam-ldapd`, `nslcd`).
+The native `authentik-agent` (`libpam-authentik`) requires an **Enterprise License** for password-based Linux logins. The free and open-source alternative is the **Authentik LDAP Outpost** paired with standard Linux NSS/PAM LDAP clients (`libnss-ldapd`, `libpam-ldapd`, `nslcd`).
 
 ### Architecture
+
 ```
-User ──SSH──► LXC ──PAM──► libpam-ldapd ──LDAP──► authentik LDAP Outpost ──API──► authentik
+User ──SSH──► LXC ──PAM──► libpam-ldapd ──LDAP──► Authentik LDAP Outpost ──API──► Authentik
 │
 └──► pam_listfile.so ──► /etc/lxc-access.conf
 ```
 
-- **authentik** stores users, groups, and passwords
+- **Authentik** stores users, groups, and passwords
 - **LDAP Outpost** exposes users via standard LDAP protocol
-- **nslcd** resolves users/groups on the LXC
-- **libpam-ldapd** verifies passwords against authentik
+- **nslcd** resolves users and groups on the LXC
+- **libpam-ldapd** verifies passwords against Authentik
 - **pam_listfile.so** restricts which users can log in to which LXC
 
 ---
@@ -32,26 +35,26 @@ User ──SSH──► LXC ──PAM──► libpam-ldapd ──LDAP──► 
 |-----------|----------------------|
 | Proxmox VE | 8.x |
 | LXC Template | Debian 13 (standard) |
-| authentik | 2026.8.x or later |
+| Authentik | 2026.8.x or later |
 | Network | `vmbr1` with VLAN tags managed by OPNsense |
 | VLANs | 101 (lectors), 110 (sk25-26), 120 (sk26-27) |
 
 ---
 
-## Part 1: Authentik Server Configuration
+## Part 1: Authentik server configuration
 
-### 1.1 Create the LDAP Outpost
+### 1.1 Create the LDAP outpost
 
-1. Go to **Applications > Outposts**
+1. Go to **Applications → Outposts**
 2. Click **Create**
 3. Name: `ldap-outpost`
 4. Type: `LDAP`
 5. Service connection: Select your Docker or Kubernetes integration
 6. Save
 
-### 1.2 Create the LDAP Provider
+### 1.2 Create the LDAP provider
 
-1. Go to **Applications > Providers > Create**
+1. Go to **Applications → Providers → Create**
 2. Type: **LDAP Provider**
 3. Name: `LXC Login`
 4. Base DN: `DC=authentik,DC=mgmt,DC=pve99,DC=local`
@@ -59,42 +62,42 @@ User ──SSH──► LXC ──PAM──► libpam-ldapd ──LDAP──► 
 6. Search group: Select or create a group for LDAP search access
 7. Save
 
-### 1.3 Create the Application
+### 1.3 Create the application
 
-1. Go to **Applications > Applications > Create**
+1. Go to **Applications → Applications → Create**
 2. Name: `LXC Login`
 3. Slug: `lxc-login`
 4. Provider: `LXC Login`
 5. Save
 
-### 1.4 Bind the Provider to the Outpost
+### 1.4 Bind the provider to the outpost
 
-1. Go to **Applications > Outposts**
+1. Go to **Applications → Outposts**
 2. Edit `ldap-outpost`
 3. Add `LXC Login` to the list of providers
 4. Save and wait for the outpost to deploy
 
-### 1.5 Create a Service Account for LDAP Binding
+### 1.5 Create a service account for LDAP binding
 
-1. Go to **Directory > Users > Create**
+1. Go to **Directory → Users → Create**
 2. Name: `ldap-bind-account`
 3. Username: `ldap-bind-account`
 4. Set a strong password
 5. Save
 
-6. Go to **Directory > Groups > Create**
+6. Go to **Directory → Groups → Create**
 7. Name: `Role LDAP - search`
 8. Save
 
-9. Go to **Directory > Users > ldap-bind-account > Groups**
+9. Go to **Directory → Users → ldap-bind-account → Groups**
 10. Add to `Role LDAP - search`
 
-11. Go to **Applications > Providers > LXC Login**
+11. Go to **Applications → Providers → LXC Login`
 12. In **Search group**, select `Role LDAP - search`
 
-### 1.6 Configure Application Bindings
+### 1.6 Configure application bindings
 
-1. Go to **Applications > Applications > LXC Login**
+1. Go to **Applications → Applications → LXC Login`
 2. Click **Policy / Group / User Bindings**
 3. Add bindings for:
    - `ldap-bind-account` user
@@ -103,15 +106,17 @@ User ──SSH──► LXC ──PAM──► libpam-ldapd ──LDAP──► 
    - `Students` group
    - `Hosting` group
 
-Without these bindings, authentik returns `Insufficient access` on LDAP searches.
+Without these bindings, Authentik returns `Insufficient access` on LDAP searches.
 
-## Part 2: LXC Template Preparation
+---
 
-### 2.1 Create the Template LXC
+## Part 2: LXC template preparation
+
+### 2.1 Create the template LXC
 
 On the Proxmox node:
-```bash
 
+```bash
 pct create 9000 local:vztmpl/debian-13-standard_13.0-1_amd64.tar.zst \
   --hostname template-ldap \
   --storage local-zfs \
@@ -126,10 +131,8 @@ pct start 9000
 pct enter 9000
 ```
 
-### 2.2 Install Required Packages
-
-The whole installation and configuration can be automated using the [setup-ldap.sh](/docs-static/files/setup-ldap.sh) script. Run it as root inside the LXC.
-
+### 2.2 Install required packages
+The whole installation and configuration can be automated using the setup-ldap.sh script. Run it as root inside the LXC.
 Or do the manual installation and configuration:
 
 ```bash
@@ -152,8 +155,7 @@ apt-get install -y \
 ```
 
 ### 2.3 Configure nslcd
-
-Create /etc/nslcd.conf:
+Create `/etc/nslcd.conf`:
 
 ```ini
 uid root
@@ -185,12 +187,16 @@ tls_reqcert never
 ```
 
 Set permissions:
+
 ```bash
+chown root:root /etc/nslcd.conf
 chmod 600 /etc/nslcd.conf
 ```
 
 ### 2.4 Configure NSS
-Edit /etc/nsswitch.conf:
+
+Edit `/etc/nsswitch.conf`:
+
 ```
 passwd:         files ldap
 group:          files ldap
@@ -207,11 +213,13 @@ netgroup:       nis
 
 ### 2.5 Configure PAM
 Use pam-auth-update for clean configuration:
+
 ```bash
 export DEBIAN_FRONTEND=noninteractive
 pam-auth-update --package --enable ldap mkhomedir
 ```
-Or configure manually. /etc/pam.d/sshd:
+
+Or configure manually. `/etc/pam.d/sshd`:
 ```
 auth    [success=2 default=ignore]      pam_ldap.so use_first_pass
 auth    required                        pam_unix.so nullok_secure
@@ -266,13 +274,12 @@ AuthorizedKeysCommand /usr/local/bin/ldap-ssh-keys.sh %u
 AuthorizedKeysCommandUser root
 ```
 
-### 2.7 Configure Sudo Rules
-Administrators (/etc/sudoers.d/99-admins):
+### 2.7 Configure sudo rules
+Administrators (`/etc/sudoers.d/99-admins`):
 ```
 %Administrators ALL=(ALL:ALL) NOPASSWD: ALL
 ```
-
-Lectors (/etc/sudoers.d/98-lectors):
+Lectors (`/etc/sudoers.d/98-lectors`):
 ```
 Cmnd_Alias LECTOR_RESTART = /bin/systemctl restart apache2, /bin/systemctl restart nginx, /bin/systemctl restart mysql, /bin/systemctl restart postgresql, /bin/systemctl restart php*-fpm
 Cmnd_Alias LECTOR_STATUS = /bin/systemctl status *
@@ -284,7 +291,7 @@ Cmnd_Alias LECTOR_DENY_GROUPS = /usr/sbin/usermod -G *Administrators*, /usr/sbin
 %Lectors ALL=(ALL) NOPASSWD: LECTOR_RESTART, LECTOR_STATUS, LECTOR_USERMGMT, LECTOR_FILE_PERMS, !LECTOR_DENY_USERS, !LECTOR_DENY_GROUPS
 ```
 
-Students (/etc/sudoers.d/97-students):
+Students (`/etc/sudoers.d/97-students`):
 ```
 Cmnd_Alias STUDENT_WEB_RESTART = /bin/systemctl restart apache2, /bin/systemctl restart nginx, /bin/systemctl restart php*-fpm
 Cmnd_Alias STUDENT_STATUS = /bin/systemctl status *
@@ -299,13 +306,14 @@ Cmnd_Alias STUDENT_DENY_SUDOERS = /usr/bin/vim /etc/sudoers*, /usr/bin/nano /etc
 
 %Students ALL=(ALL) NOPASSWD: STUDENT_WEB_RESTART, STUDENT_STATUS, STUDENT_FILE_PERMS, STUDENT_INSTALL, !STUDENT_DENY_SYSTEM, !STUDENT_DENY_USERS, !STUDENT_DENY_GROUPS, !STUDENT_DENY_PACKAGES, !STUDENT_DENY_SUDOERS
 ```
+
 Verify:
 ```bash
 visudo -c
 ```
-### 2.8 Finalize Template
-```bash
 
+### 2.8 Finalize template
+```bash
 mkdir -p /etc/skel/.ssh
 chmod 700 /etc/skel/.ssh
 
@@ -322,66 +330,30 @@ pct stop 9000
 pct template 9000
 ```
 
-## Part 3: Per-LXC Access Control
-### How It Works
-The file /etc/lxc-access.conf on each LXC contains a list of usernames allowed to log in. pam_listfile.so checks this file on every SSH login. No authentik apps, no per-user groups, no firewall rules.
-Example Access Files
-sk25-26-student1 LXC:
+### Part 3: Per-LXC access control
+How it works
+The file `/etc/lxc-access.conf` on each LXC contains a list of usernames allowed to log in. `pam_listfile.so` checks this file on every SSH login. No Authentik apps, no per-user groups, no firewall rules.
+Example access files:
+`sk25-26-student1` LXC:
 ```
 akadmin
 lector1
 lector2
 student1
 ```
-- akadmin (admin) can access every LXC
-- lector1, lector2 can access all LXCs in their year group
-- student1 can access their own LXC
 
-sk25-26-lector1 LXC:
+`sk25-26-lector1` LXC:
 ```
 akadmin
 lector1
 lector2
 student1
 ```
+- `akadmin` (admin) can access every LXC
+- `lector1`, `lector2` can access all LXCs in their year group
+- `student1` can access their own LXC
 
 Lectors see all users in their year group.
-
-### mgmtclt Integration
-When creating an LXC, mgmtclt writes the access file:
-```Python
-
-def write_lxc_access_conf(vmid: int, owner: str, year_group: str):
-    allowed = {owner}
-    
-    # Admins everywhere
-    for admin in authentik.get_users_in_group("Administrators"):
-        allowed.add(admin["username"])
-    
-    # Lectors for this year group
-    for lector in authentik.get_users_in_group(f"Lectors-{year_group}"):
-        allowed.add(lector["username"])
-    
-    # Delegated users
-    allowed.update(get_delegated_users(owner))
-    
-    content = "\n".join(sorted(allowed)) + "\n"
-    
-    pve.exec_in_lxc(vmid, f"cat > /etc/lxc-access.conf << 'EOF'\n{content}EOF")
-```
-
-User Self-Service Delegation
-```Python
-
-def delegate_access(owner: str, delegate: str):
-    hostname = f"{get_year_group(owner)}-{owner}"
-    vmid = get_vmid(hostname)
-    pve.exec_in_lxc(vmid, f"echo '{delegate}' >> /etc/lxc-access.conf")
-
-def revoke_access(owner: str, delegate: str):
-    hostname = f"{get_year_group(owner)}-{owner}"
-    vmid = get_vmid(hostname)
-    pve.exec_in_lxc(vmid, f"sed -i '/^{delegate}$/d' /etc/lxc-access.conf")
-
-Changes are immediate — no service restart needed.
-```
+<Note>
+  When creating an LXC, write the access file during provisioning. This is the only per-container configuration required for SSH access control.
+</Note>

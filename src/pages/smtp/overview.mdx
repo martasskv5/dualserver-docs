@@ -1,0 +1,54 @@
+import {Tiles} from "@/components/Tiles"
+
+export const description =
+  'Overview of the Postfix SMTP relay in the DualServer environment.'
+
+# SMTP Overview
+
+Postfix acts as a local SMTP relay for the DualServer environment. It accepts email from GitLab, Authentik, and any other internal service, then forwards it to an external SMTP server — in this case, Microsoft 365.
+
+## Why a local relay?
+
+| Benefit | Explanation |
+|---------|-------------|
+| **Single configuration point** | Every service points to the same internal host |
+| **Credential isolation** | Only Postfix stores the external SMTP password |
+| **Testing** | Development environments can send real email without exposing credentials in every app |
+| **Reliability** | If the external service is briefly unavailable, Postfix queues mail automatically |
+
+## Architecture
+```
+[GitLab] ──┐
+[Authentik]─┼──► [Postfix on VLAN 10] ──► [Microsoft 365] ──► Internet
+[Other apps]─┘
+```
+
+## How to use this section
+
+| Page | Purpose |
+|------|---------|
+| [Installation](/smtp/installation) | Deploy Postfix in an LXC container |
+| [Configuration](/smtp/configuration) | Set the hostname, networks, and basic parameters |
+| [Proxy](/smtp/proxy) | Configure SASL authentication and the Microsoft 365 relay |
+
+<Tiles 
+  title="Next Steps" 
+  id="next-steps" 
+  items={[
+    {
+      href: '/smtp/installation',
+      name: 'Install Postfix',
+      description: 'Create the LXC and install the mail server.',
+    },
+    {
+      href: '/smtp/configuration',
+      name: 'Configure Postfix',
+      description: 'Set basic parameters before enabling the relay.',
+    },
+    {
+      href: '/smtp/proxy',
+      name: 'Proxy Setup',
+      description: 'Forward all mail to Microsoft 365 with SASL auth.',
+    },
+  ]} 
+/>

@@ -1,11 +1,11 @@
-import {Note} from "@/components/mdx";
+import {Tiles} from "@/components/Tiles"
 
 export const description =
-    "How users and groups are organized in Authentik for the GitLab integration"
+  'Overview of Authentik as the identity provider for the DualServer environment.'
 
 # Authentik Overview
 
-Authentik is where everything starts. It is the single place where you manage who people are and which year group they belong to. GitLab simply mirrors what you set up here.
+Authentik is the single place where you manage who people are and which year group they belong to. Every other service that supports external authentication — GitLab, SSH logins to LXC containers, and any future applications — reads from Authentik.
 
 ## How people are organized
 
@@ -20,7 +20,7 @@ These tell the system whether someone is a teacher or a student.
 | **Lectors** | Teachers and administrators. They get full access to every project in their assigned year group. |
 | **Students** | Regular students. They can create projects and invite classmates, but teachers always have oversight. |
 
-A person must be in exactly one of these role groups. If they are in neither, the sync service ignores them.
+A person must be in exactly one of these role groups. If they are in neither, services that rely on role mapping will ignore them.
 
 ### Year groups
 
@@ -54,15 +54,7 @@ The sync service reads these memberships and translates them into GitLab roles b
 | Remove someone from a year group | They are removed from that GitLab group entirely |
 | Rename a group | A new GitLab group is created; the old one is not renamed automatically |
 
-## The property mapping
-
-When a user logs in, Authentik sends a small packet of information to GitLab. We use a custom property mapping to shape that packet so it includes the user's year group and role.
-
-You do not need to touch this mapping during normal use. It is set up once and runs automatically. The only time you might edit it is if you add new role groups or change how year group names work.
-
-## What you manage here
-
-This is your checklist for day-to-day management:
+## Day-to-day management checklist
 
 - [ ] Add new students to the **Students** role group
 - [ ] Add new teachers to the **Lectors** role group
@@ -71,3 +63,35 @@ This is your checklist for day-to-day management:
 - [ ] Move teachers when they switch classes
 
 Everything else — creating GitLab groups, setting permissions, adding members — happens automatically.
+
+<Tiles 
+  title="Guides" 
+  id="guides" 
+  items={[
+    {
+      href: '/authentik/installation',
+      name: 'Install Authentik',
+      description: 'Deploy Authentik as a Docker container inside an LXC.',
+    },
+    {
+      href: '/authentik/creating-new-application',
+      name: 'Create an Application',
+      description: 'Register a new application and provider in Authentik.',
+    },
+    {
+      href: '/authentik/ssh-keys',
+      name: 'Manage SSH Keys',
+      description: 'Let users store their public SSH keys in their Authentik profile.',
+    },
+    {
+      href: '/authentik/gitlab-integration',
+      name: 'GitLab Integration',
+      description: 'Connect Authentik OIDC to GitLab CE with group sync.',
+    },
+    {
+      href: '/authentik/ldap-integration',
+      name: 'LDAP Integration',
+      description: 'Use Authentik LDAP for SSH logins to LXC containers.',
+    },
+  ]} 
+/>
