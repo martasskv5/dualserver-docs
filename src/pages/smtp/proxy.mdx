@@ -1,0 +1,52 @@
+export const description =
+    'Postfix as proxy in development environment'
+
+# Postfix as a Proxy
+
+In development environments, it is common to use a local SMTP server as a proxy to forward emails to an external SMTP server. This allows to test email functionality in isolated environments.
+
+As external SMTP server, we will use the Microsoft 365 SMTP server. The following configuration will be used:
+
+`/etc/postfix/main.cf`
+```
+# See /usr/share/postfix/main.cf.dist for a commented, more complete version
+
+smtpd_banner = $myhostname ESMTP $mail_name (Debian/GNU)
+biff = no
+
+# appending .domain is the MUA's job.
+append_dot_mydomain = no
+
+# Uncomment the next line to generate "delayed mail" warnings
+#delay_warning_time = 4h
+
+alias_maps = hash:/etc/aliases
+alias_database = hash:/etc/aliases
+mydestination = $myhostname, localhost.$mydomain, localhost
+recipient_delimiter = +
+
+compatibility_level = 2
+
+# Route all outbound mail to Microsoft 365
+relayhost = [smtp.office365.com]:587
+
+# Enable SASL authentication and outbound TLS required by Microsoft
+smtp_tls_security_level = encrypt
+smtp_sasl_auth_enable = yes
+smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
+smtp_sasl_security_options = noanonymous
+smtp_sasl_tls_security_options = noanonymous
+
+# Network Access Control: Only allow your internal Proxmox subnet
+# Replace with your actual virtual bridge subnet
+mynetworks = 127.0.0.0/8, 172.17.34.0/24
+
+inet_interfaces = all
+inet_protocols = ipv4
+smtp_sasl_mechanism_filter = plain, login
+```
+
+`/etc/postfix/sasl_passwd`
+```
+[smtp.office365.com]:587 your-email@your-domain.onmicrosoft.com:your-password
+```

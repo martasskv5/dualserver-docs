@@ -25,6 +25,8 @@ Next, you need to design the input field that the user actually interacts with.
     - Field Key: `attributes.ssh_public_key` (The attributes. prefix forces the input to save directly to the user's metadata)
     - Label: `Your SSH Public Key`
     - Type: `Text (Multilines)`
+    - Interpret initial value as expression: `True` (This allows the field to pre-populate with any existing key the user has already saved)
+    - Initial value expression: `return user.attributes.get('ssh_public_key', '')` (This expression fetches the current value of the user's SSH key, if any)
 5. Save the field and the stage.
 
 ## Step 3: Add the Prompt to a Flow

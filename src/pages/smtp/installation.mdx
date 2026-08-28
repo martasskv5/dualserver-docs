@@ -1,0 +1,24 @@
+export const description =
+    'SMTP installation and configuration guide'
+
+# Installing Postfix
+
+## Create a new LXC container
+
+Create a [LXC](/proxmox/create-lxc) container with the following parameters:
+- CPU: `1`
+- RAM: `512 MB`
+- Disk: `20 GB`
+- Network: `DHCP`
+- Interface: `vmbr1`
+- Vlan: `10`
+- Hostname: `postfix`
+- Feature: `nesting=1` (this is required for Gitlab to work properly in LXC)
+- Feature: `keyctl=1` (this is required for Gitlab to work properly in LXC)
+
+## Install Postfix package
+
+Install Postfix using the following command:
+```bash
+apt update && apt install -y postfix libsasl2-modules
+```

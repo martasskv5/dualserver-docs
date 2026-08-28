@@ -95,6 +95,14 @@ export const docsNavigation = [
             {
                 title: "Gitlab Integration",
                 href: "/authentik/gitlab-integration",
+            },
+            {
+                title: "LDAP Integration",
+                href: "/authentik/ldap-integration",
+            },
+            {
+                title: "SSH Keys",
+                href: "/authentik/ssh-keys",
             }
         ]
     },
@@ -112,6 +120,27 @@ export const docsNavigation = [
             {
                 title: "Configuration",
                 href: "/gitlab/configuration"
+            }
+        ]
+    },
+    {
+        title: 'SMTP',
+        links: [
+            {
+                title: "Overview",
+                href: "/smtp/overview",
+            },
+            {
+                title: "Installation",
+                href: "/smtp/installation",
+            },
+            {
+                title: "Configuration",
+                href: "/smtp/configuration"
+            },
+            {
+                title: "Proxy",
+                href: "/smtp/proxy"
             }
         ]
     }
