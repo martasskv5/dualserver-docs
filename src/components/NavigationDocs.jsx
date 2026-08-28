@@ -15,7 +15,7 @@ import {
 } from '@/components/NavigationState'
 import ChevronDownIcon from '@/components/icons/ChevronDownIcon'
 import { useIsInsideMobileNavigation } from '@/components/MobileNavigation'
-import { title } from '@/pages/_old/ipa/resources/accounts.mdx'
+// import { title } from '@/pages/_old/ipa/resources/accounts.mdx'
 
 export const docsNavigation = [
     {
