@@ -100,20 +100,6 @@ const nextConfig = {
                 destination: '/:path*',
                 permanent: true,
             },
-            {
-                source: '/ipa/:path*',
-                destination: '/api/:path*',
-                permanent: true,
-                // Client-side navigations fetch page props from
-                // /_next/data/<buildId>/ipa/... — redirecting those requests
-                // strips pageProps (title, sections), so skip data requests.
-                missing: [
-                    {
-                        type: 'header',
-                        key: 'x-nextjs-data',
-                    },
-                ],
-            },
             // documentation redirects for about
             {
                 source: '/selfhosted/self-hosted-vs-cloud-netbird',
@@ -927,12 +913,12 @@ const nextConfig = {
                 destination: '/introduction',
             },
             {
-                source: '/api',
-                destination: '/ipa/introduction',
+                source: '/mgmtctl',
+                destination: '/mgmtctl/introduction',
             },
             {
-                source: '/api/:path*',
-                destination: '/ipa/:path*',
+                source: '/mgmtctl/:path*',
+                destination: '/mgmtctl/:path*',
             }
         ]
     }

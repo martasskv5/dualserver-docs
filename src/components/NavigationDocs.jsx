@@ -5,7 +5,7 @@ import {
     NavLink,
     TopLevelNavItem,
     VisibleSectionHighlight,
-} from '@/components/NavigationAPI'
+} from '@/components/NavigationMGMTCTL'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Button } from '@/components/mdx'
 import { useEffect, useState } from 'react'
@@ -156,7 +156,7 @@ export function NavigationDocs({ className }) {
             <ul role="list">
                 <TopLevelNavItem href="https://netbird.io/">Home</TopLevelNavItem>
                 <TopLevelNavItem href="/">Docs</TopLevelNavItem>
-                <TopLevelNavItem href="/api">API</TopLevelNavItem>
+                <TopLevelNavItem href="/mgmtctl">mgmtctl</TopLevelNavItem>
                 <TopLevelNavItem href="https://netbird.io/knowledge-hub/">
                     Learn
                 </TopLevelNavItem>

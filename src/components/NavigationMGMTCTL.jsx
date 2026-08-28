@@ -11,89 +11,16 @@ import {
   useNavigationState,
 } from '@/components/NavigationState'
 
-export const apiNavigation = [
+export const mgmtctlNavigation = [
   {
-    title: 'Guides',
+    title: 'Mgmtctl',
     links: [
-      { title: 'Quickstart', href: '/api/guides/quickstart' },
-      { title: 'Authentication', href: '/api/guides/authentication' },
-      { title: 'Errors', href: '/api/guides/errors' },
-      { title: 'MSP API access', href: '/api/guides/msp-api-access' },
+      { title: 'Overview', href: '/mgmtctl' },
+      // Add sub-pages here as you create them:
+      // { title: 'Installation', href: '/mgmtctl/installation' },
+      // { title: 'Commands', href: '/mgmtctl/commands' },
     ],
-  },
-  {
-    title: 'Resources',
-    links: [
-      { title: 'Accounts', href: '/api/resources/accounts' },
-      { title: 'Users', href: '/api/resources/users' },
-      { title: 'Tokens', href: '/api/resources/tokens' },
-      { title: 'Peers', href: '/api/resources/peers' },
-      { title: 'Setup Keys', href: '/api/resources/setup-keys' },
-      { title: 'Groups', href: '/api/resources/groups' },
-      { title: 'Policies', href: '/api/resources/policies' },
-      { title: 'Posture Checks', href: '/api/resources/posture-checks' },
-      { title: 'Geo Locations', href: '/api/resources/geo-locations' },
-      { title: 'Routes (deprecated)', href: '/api/resources/routes' },
-      { title: 'Networks', href: '/api/resources/networks' },
-      { title: 'DNS', href: '/api/resources/dns' },
-      { title: 'DNS Zones', href: '/api/resources/dns-zones' },
-      { title: 'Services', href: '/api/resources/services' },
-      { title: 'Agent Network', href: '/api/resources/agent-network' },
-      { title: 'Events', href: '/api/resources/events' },
-      {
-        title: 'Event Streaming',
-        href: '/api/resources/event-streaming-integrations',
-      },
-      { title: 'Jobs', href: '/api/resources/jobs' },
-      {
-        title: 'Identity Providers',
-        href: '/api/resources/identity-providers',
-      },
-      { title: 'Instance', href: '/api/resources/instance' },
-    ],
-  },
-  {
-    title: 'Cloud Resources',
-    links: [
-      { title: 'Ingress Ports', href: '/api/resources/ingress-ports' },
-      {
-        title: 'IDP (Azure API)',
-        href: '/api/resources/idp-azure-integrations',
-      },
-      {
-        title: 'IDP (Google API)',
-        href: '/api/resources/idp-google-integrations',
-      },
-      {
-        title: 'IDP (Okta SCIM)',
-        href: '/api/resources/idp-okta-scim-integrations',
-      },
-      {
-        title: 'IDP (SCIM Generic)',
-        href: '/api/resources/idp-scim-integrations',
-      },
-      {
-        title: 'Event Streaming',
-        href: '/api/resources/event-streaming-integrations',
-      },
-      { title: 'EDR Peers', href: '/api/resources/edr-peers' },
-      { title: 'EDR Falcon', href: '/api/resources/edr-falcon-integrations' },
-      { title: 'EDR FleetDM', href: '/api/resources/edr-fleetdm-integrations' },
-      {
-        title: 'EDR Huntress',
-        href: '/api/resources/edr-huntress-integrations',
-      },
-      { title: 'EDR Intune', href: '/api/resources/edr-intune-integrations' },
-      {
-        title: 'EDR SentinelOne',
-        href: '/api/resources/edr-sentinelone-integrations',
-      },
-      { title: 'Notifications', href: '/api/resources/notifications' },
-      { title: 'MSP', href: '/api/resources/msp' },
-      { title: 'Invoice', href: '/api/resources/invoice' },
-      { title: 'Usage', href: '/api/resources/usage' },
-    ],
-  },
+  }
 ]
 
 export function NavigationMGMTCTL({ tableOfContents, className }) {
@@ -110,7 +37,7 @@ export function NavigationMGMTCTL({ tableOfContents, className }) {
           Github
         </TopLevelNavItem>
         <TopLevelNavItem href="/slack-url">Support</TopLevelNavItem>
-        {apiNavigation.map((group, groupIndex) => (
+        {mgmtctlNavigation.map((group, groupIndex) => (
           <NavigationStateProvider key={group.title} index={groupIndex}>
             <NavigationGroup
               group={group}
@@ -263,7 +190,7 @@ function NavigationGroup({ group, className, tableOfContents }) {
   let router = useRouter()
   let isActiveGroup =
     group.links.findIndex(
-      (link) => link.href === router.pathname.replace('ipa', 'api')
+      (link) => link.href === router.pathname
     ) !== -1
 
   return (
@@ -280,7 +207,7 @@ function NavigationGroup({ group, className, tableOfContents }) {
           {isActiveGroup && (
             <VisibleSectionHighlight
               group={group}
-              pathname={router.pathname.replace('ipa', 'api')}
+              pathname={router.pathname}
             />
           )}
         </AnimatePresence>
@@ -292,7 +219,7 @@ function NavigationGroup({ group, className, tableOfContents }) {
           {isActiveGroup && (
             <ActivePageMarker
               group={group}
-              pathname={router.pathname.replace('ipa', 'api')}
+              pathname={router.pathname}
             />
           )}
         </AnimatePresence>
@@ -301,12 +228,12 @@ function NavigationGroup({ group, className, tableOfContents }) {
             <motion.li key={link.href} className="relative">
               <NavLink
                 href={link.href}
-                active={link.href === router.pathname.replace('ipa', 'api')}
+                active={link.href === router.pathname}
               >
                 {link.title}
               </NavLink>
               <AnimatePresence mode="popLayout" initial={false}>
-                {link.href === router.pathname.replace('ipa', 'api') && (
+                {link.href === router.pathname && (
                   <motion.ul
                     role="list"
                     initial={{ opacity: 0 }}
@@ -319,7 +246,7 @@ function NavigationGroup({ group, className, tableOfContents }) {
                       transition: { duration: 0.15 },
                     }}
                   >
-                    {router.route.startsWith('/ipa/resources') &&
+                    {router.route.startsWith('/mgmtctl') &&
                       tableOfContents?.map((section) => (
                         <li key={section.id}>
                           <NavLink

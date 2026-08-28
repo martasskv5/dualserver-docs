@@ -65,7 +65,7 @@ export const Header = forwardRef(function Header({ className }, ref) {
           <ul role="list" className="flex items-center gap-3 xl:gap-2 m-0 p-0 list-none">
             <TopLevelNavItem href="https://netbird.io/">Home</TopLevelNavItem>
             <TopLevelNavItem href="/">Docs</TopLevelNavItem>
-            <TopLevelNavItem href="/api">API</TopLevelNavItem>
+            <TopLevelNavItem href="/mgmtctl">mgmtctl</TopLevelNavItem>
             <TopLevelNavItem href="https://netbird.io/knowledge-hub/">Learn</TopLevelNavItem>
             <TopLevelNavItem href="https://github.com/netbirdio/netbird">Github</TopLevelNavItem>
             <TopLevelNavItem href="/slack-url">Support</TopLevelNavItem>

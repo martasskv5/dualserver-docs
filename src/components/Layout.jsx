@@ -8,7 +8,7 @@ import { Prose } from '@/components/Prose'
 import {HeroPattern} from "@/components/HeroPattern";
 import {NavigationDocs} from "@/components/NavigationDocs";
 import {Header} from "@/components/Header";
-import {NavigationAPI} from "@/components/NavigationAPI";
+import {NavigationMGMTCTL} from "@/components/NavigationMGMTCTL";
 import {motion} from "framer-motion";
 import {Footer} from "@/components/Footer";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
@@ -202,7 +202,7 @@ export function Layout({ children, title, tableOfContents }) {
                 <Logo className="h-6" />
               </Link>
             </div>
-            {router.route.startsWith("/ipa") ? <NavigationAPI className="hidden lg:mt-10 lg:block" tableOfContents={tableOfContents} /> : <NavigationDocs className="hidden lg:mt-10 lg:block" />}
+            {router.route.startsWith("/mgmtctl") ? <NavigationMGMTCTL className="hidden lg:mt-10 lg:block" tableOfContents={tableOfContents} /> : <NavigationDocs className="hidden lg:mt-10 lg:block" />}
           </div>
           <Header />
         </header>
@@ -212,7 +212,7 @@ export function Layout({ children, title, tableOfContents }) {
           </main>
           <Footer />
         </div>
-        {!router.route.startsWith("/ipa/resources") && <div
+        {!router.route.startsWith("/mgmtctl") && <div
             className="hidden xl:sticky xl:top-[4.5rem] xl:-mr-6 xl:block xl:h-[calc(100vh-4.5rem)] xl:flex-none xl:overflow-y-auto xl:py-16 xl:pr-6 pl-12"
             style={{ top: `calc(${bannerHeight}px + 4.5rem)` }}
         >
