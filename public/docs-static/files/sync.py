@@ -58,7 +58,7 @@ MAINTAINER = 40
 OWNER = 50
 
 LECTOR_ROLE = MAINTAINER   # Can manage group, access all repos, change settings
-STUDENT_ROLE = DEVELOPER   # Can push code, create repos, invite up to Developer
+STUDENT_ROLE = MAINTAINER   # Can push code, create repos, invite up to Developer access
 
 
 # ── Authentik Client ─────────────────────────────────────────────────────
@@ -636,26 +636,27 @@ def sync():
     logger.info(f"  SSH keys synced for {ssh_sync_count} user(s)")
 
     # ── Enforce project visibility ───────────────────────────────────────
-    logger.info("Enforcing Internal visibility on all projects...")
-    for group_name in desired:
-        group = gl_groups.get(group_name)
-        if not group:
-            continue
-        group_id = group["id"]
-        try:
-            projects = gl.get_group_projects(group_id)
-            for proj in projects:
-                if proj.get("visibility") == "private":
-                    logger.info(
-                        f"  Changing project '{proj['path_with_namespace']}' "
-                        f"from Private → Internal"
-                    )
-                    try:
-                        gl.update_project(proj["id"], {"visibility": "internal"})
-                    except Exception as e:
-                        logger.error(f"    Failed: {e}")
-        except Exception as e:
-            logger.error(f"  Failed to list projects for {group_name}: {e}")
+    # logger.info("Enforcing Internal visibility on all projects...")
+    # for group_name in desired:
+    #     group = gl_groups.get(group_name)
+    #     if not group:
+    #         continue
+    #     group_id = group["id"]
+    #     try:
+    #         projects = gl.get_group_projects(group_id)
+    #         for proj in projects:
+    #             if proj.get("visibility") == "private":
+    #                 logger.info(
+    #                     f"  Changing project '{proj['path_with_namespace']}' "
+    #                     f"from Private → Internal"
+    #                 )
+    #                 try:
+    #                     gl.update_project(proj["id"], {"visibility": "internal"})
+    #                 except Exception as e:
+    #                     logger.error(f"    Failed: {e}")
+    #     except Exception as e:
+    #         logger.error(f"  Failed to list projects for {group_name}: {e}")
+    logger.info("Project visibility enforcement disabled")
 
     logger.info("Sync complete")
     logger.info("=" * 60)

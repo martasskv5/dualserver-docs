@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>CLI Tree Editor</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          sans-serif;
+        margin: 0;
+        padding: 24px;
+        background: #0a0a0a;
+        color: #e5e5e5;
+      }
+      .editor {
+        padding: 16px;
+      }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .toolbar button {
+        padding: 6px 14px;
+        border-radius: 8px;
+        border: 1px solid #333;
+        background: #1a1a1a;
+        cursor: pointer;
+        font-size: 13px;
+        color: #aaa;
+        transition: all 0.15s ease;
+      }
+      .toolbar button:hover {
+        background: #222;
+        color: #fff;
+      }
+      .toolbar button.on {
+        background: #e5e5e5;
+        color: #0a0a0a;
+        border-color: #e5e5e5;
+      }
+      .toolbar button.primary {
+        background: #e5e5e5;
+        color: #0a0a0a;
+        border-color: #e5e5e5;
+      }
+      .toolbar .sep {
+        width: 1px;
+        background: #333;
+        margin: 0 4px;
+        height: 28px;
+      }
+      .color-swatch {
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        display: inline-block;
+        border: 1px solid #444;
+        cursor: pointer;
+      }
+      .canvas-wrap {
+        width: 100%;
+        height: 600px;
+        overflow: auto;
+        border: 1px solid #333;
+        border-radius: 10px;
+        background: #0a0a0a;
+      }
+      svg {
+        width: 3000px;
+        height: 2000px;
+        display: block;
+        background: #0a0a0a;
+      }
+      .grid-line {
+        stroke: #1a1a1a;
+        stroke-width: 1;
+      }
+      .node-rect {
+        stroke-width: 2;
+        rx: 10;
+        ry: 10;
+        cursor: grab;
+        transition: filter 0.15s ease;
+      }
+      .node-rect:active {
+        cursor: grabbing;
+      }
+      .node-rect:hover {
+        filter: brightness(1.15);
+      }
+      .node-text {
+        font-family: 'SFMono-Regular', Consolas, monospace;
+        font-size: 13px;
+        font-weight: 500;
+        pointer-events: none;
+      }
+      .edge {
+        stroke: #555;
+        stroke-width: 2;
+        fill: none;
+      }
+      .arrow {
+        fill: #555;
+      }
+      .selected .node-rect {
+        stroke: #fff;
+        stroke-width: 3;
+      }
+      .panel {
+        margin-top: 12px;
+        padding: 12px 16px;
+        border-radius: 10px;
+        border: 1px solid #333;
+      }
+      .panel-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+      .panel-row label {
+        font-size: 13px;
+        color: #888;
+        min-width: 70px;
+      }
+      .panel-row input,
+      .panel-row textarea {
+        flex: 1;
+        padding: 6px 10px;
+        border-radius: 8px;
+        border: 1px solid #333;
+        background: #1a1a1a;
+        color: #e5e5e5;
+        font-family: monospace;
+        font-size: 13px;
+      }
+      .panel-row textarea {
+        min-height: 60px;
+        resize: vertical;
+      }
+      .panel-row input:focus,
+      .panel-row textarea:focus {
+        outline: none;
+        border-color: #888;
+      }
+      .hint {
+        font-size: 12px;
+        color: #555;
+        margin-top: 8px;
+      }
+      .ctx-menu {
+        position: absolute;
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 4px 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        z-index: 100;
+        display: none;
+        min-width: 140px;
+      }
+      .ctx-menu div {
+        padding: 8px 16px;
+        font-size: 13px;
+        cursor: pointer;
+        color: #e5e5e5;
+      }
+      .ctx-menu div:hover {
+        background: #222;
+      }
+      .ctx-menu .danger {
+        color: #f87171;
+      }
+      .tooltip {
+        position: absolute;
+        background: #1a1a1a;
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 8px 12px;
+        max-width: 220px;
+        font-size: 12px;
+        color: #ccc;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+        z-index: 50;
+        line-height: 1.5;
+      }
+      .tooltip.show {
+        opacity: 1;
+      }
+    </style>
+    <base target="_blank" />
+  </head>
+  <body>
+    <div class="editor">
+      <div class="toolbar">
+        <button onclick="addChild()">+ Add child</button
+        ><button onclick="addSibling()">+ Add sibling</button
+        ><button onclick="deleteNode()">Delete</button>
+        <div class="sep"></div>
+        <button onclick="setColor(0)" title="Root">
+          <span class="color-swatch" style="background: #e5e7eb"></span></button
+        ><button onclick="setColor(1)" title="Module">
+          <span class="color-swatch" style="background: #4ade80"></span></button
+        ><button onclick="setColor(2)" title="Module command">
+          <span class="color-swatch" style="background: #60a5fa"></span></button
+        ><button onclick="setColor(3)" title="Subcommand / Positional">
+          <span class="color-swatch" style="background: #f87171"></span></button
+        ><button onclick="setColor(4)" title="Flag">
+          <span class="color-swatch" style="background: #a78bfa"></span></button
+        ><button onclick="setColor(5)" title="Implicit">
+          <span class="color-swatch" style="background: #93c5fd"></span>
+        </button>
+        <div class="sep"></div>
+        <button id="btn-grid" onclick="toggleGrid()">Grid: OFF</button
+        ><button onclick="autoLayout()">Auto-organize</button>
+        <div class="sep"></div>
+        <button onclick="resetTree()">Reset</button
+        ><button class="primary" onclick="exportTree()">Export JSON</button
+        ><button onclick="exportSVG()">Export SVG</button
+        ><button onclick="importTree()">Import JSON</button
+        ><input
+          type="file"
+          id="file-input"
+          accept=".json"
+          style="display: none"
+          onchange="handleFile(event)"
+        />
+      </div>
+      <div class="canvas-wrap">
+        <svg id="tree-svg" viewBox="0 0 3000 2000"></svg>
+      </div>
+      <div class="panel" id="prop-panel">
+        <div class="panel-row">
+          <label>Label</label
+          ><input
+            type="text"
+            id="inp-label"
+            oninput="updateLabel(this.value)"
+          />
+        </div>
+        <div class="panel-row">
+          <label>Width</label
+          ><input
+            type="number"
+            id="inp-w"
+            min="40"
+            max="300"
+            oninput="updateSize(`w`,this.value)"
+          />
+        </div>
+        <div class="panel-row">
+          <label>Height</label
+          ><input
+            type="number"
+            id="inp-h"
+            min="20"
+            max="200"
+            oninput="updateSize(`h`,this.value)"
+          />
+        </div>
+        <div class="panel-row">
+          <label>Note</label
+          ><textarea
+            id="inp-note"
+            oninput="updateNote(this.value)"
+            placeholder="Hover tooltip text..."
+          ></textarea>
+        </div>
+        <div class="hint">
+          Click a node to select. Drag to move. Double-click to edit label.
+          Right-click for menu. Toggle grid to snap. Auto-organize to fix
+          overlaps. Scroll canvas to pan.
+        </div>
+      </div>
+    </div>
+    <div class="ctx-menu" id="ctx-menu">
+      <div onclick="ctxAddChild()">Add child</div>
+      <div onclick="ctxAddSibling()">Add sibling</div>
+      <div class="danger" onclick="ctxDelete()">Delete node</div>
+    </div>
+    <div class="tooltip" id="tooltip"></div>
+    <script>
+      const TYPES = [
+        { name: 'root', color: '#e5e7eb', text: '#111827', w: 90, h: 40 },
+        { name: 'module', color: '#4ade80', text: '#064e3b', w: 100, h: 40 },
+        {
+          name: 'module_command',
+          color: '#60a5fa',
+          text: '#1e3a8a',
+          w: 80,
+          h: 36,
+        },
+        { name: 'subcommand', color: '#f87171', text: '#7f1d1d', w: 80, h: 32 },
+        { name: 'flag', color: '#a78bfa', text: '#4c1d95', w: 90, h: 30 },
+        { name: 'implicit', color: '#93c5fd', text: '#1e3a8a', w: 110, h: 32 },
+      ]
+      const GRID = 40
+      const W = 3000,
+        H = 2000
+      let treeData = {
+        id: 'n0',
+        label: 'yourtool',
+        x: 200,
+        y: 1000,
+        w: 90,
+        h: 40,
+        color: '#e5e7eb',
+        textColor: '#111827',
+        children: [
+          {
+            id: 'n1',
+            label: 'authentik',
+            x: 440,
+            y: 1000,
+            w: 100,
+            h: 40,
+            color: '#4ade80',
+            textColor: '#064e3b',
+            children: [
+              {
+                id: 'n2',
+                label: 'users',
+                x: 680,
+                y: 800,
+                w: 80,
+                h: 36,
+                color: '#60a5fa',
+                textColor: '#1e3a8a',
+                children: [
+                  {
+                    id: 'n3',
+                    label: '(list users)',
+                    x: 920,
+                    y: 800,
+                    w: 110,
+                    h: 32,
+                    color: '#93c5fd',
+                    textColor: '#1e3a8a',
+                    dashed: true,
+                  },
+                ],
+              },
+              {
+                id: 'n4',
+                label: 'groups',
+                x: 680,
+                y: 900,
+                w: 80,
+                h: 36,
+                color: '#60a5fa',
+                textColor: '#1e3a8a',
+                children: [
+                  {
+                    id: 'n5',
+                    label: '(list groups)',
+                    x: 920,
+                    y: 900,
+                    w: 110,
+                    h: 32,
+                    color: '#93c5fd',
+                    textColor: '#1e3a8a',
+                    dashed: true,
+                  },
+                ],
+              },
+              {
+                id: 'n6',
+                label: 'create',
+                x: 680,
+                y: 1000,
+                w: 80,
+                h: 36,
+                color: '#60a5fa',
+                textColor: '#1e3a8a',
+                children: [
+                  {
+                    id: 'n7',
+                    label: '--user',
+                    x: 920,
+                    y: 940,
+                    w: 80,
+                    h: 32,
+                    color: '#f87171',
+                    textColor: '#7f1d1d',
+                    children: [
+                      {
+                        id: 'n8',
+                        label: '<username>',
+                        x: 1160,
+                        y: 860,
+                        w: 110,
+                        h: 30,
+                        color: '#a78bfa',
+                        textColor: '#4c1d95',
+                      },
+                      {
+                        id: 'n9',
+                        label: '<email>',
+                        x: 1160,
+                        y: 910,
+                        w: 90,
+                        h: 30,
+                        color: '#a78bfa',
+                        textColor: '#4c1d95',
+                      },
+                      {
+                        id: 'n10',
+                        label: '<name>',
+                        x: 1160,
+                        y: 960,
+                        w: 90,
+                        h: 30,
+                        color: '#a78bfa',
+                        textColor: '#4c1d95',
+                      },
+                      {
+                        id: 'n11',
+                        label: '--groups',
+                        x: 1160,
+                        y: 1010,
+                        w: 90,
+                        h: 30,
+                        color: '#a78bfa',
+                        textColor: '#4c1d95',
+                      },
+                      {
+                        id: 'n12',
+                        label: '--ssh-key',
+                        x: 1160,
+                        y: 1060,
+                        w: 90,
+                        h: 30,
+                        color: '#a78bfa',
+                        textColor: '#4c1d95',
+                      },
+                    ],
+                  },
+                  {
+                    id: 'n13',
+                    label: '--group',
+                    x: 920,
+                    y: 1040,
+                    w: 80,
+                    h: 32,
+                    color: '#f87171',
+                    textColor: '#7f1d1d',
+                    children: [
+                      {
+                        id: 'n14',
+                        label: '<name>',
+                        x: 1160,
+                        y: 1040,
+                        w: 90,
+                        h: 30,
+                        color: '#a78bfa',
+                        textColor: '#4c1d95',
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+      let selectedId = null,
+        dragNode = null,
+        dragOffset = { x: 0, y: 0 },
+        nextId = 15,
+        ctxTarget = null,
+        gridOn = false
+      function findNode(id, node = treeData) {
+        if (node.id === id) return node
+        if (node.children) {
+          for (const c of node.children) {
+            const found = findNode(id, c)
+            if (found) return found
+          }
+        }
+        return null
+      }
+      function findParent(id, node = treeData) {
+        if (!node.children) return null
+        for (const c of node.children) {
+          if (c.id === id) return node
+          const found = findParent(id, c)
+          if (found) return found
+        }
+        return null
+      }
+      function flatten(node, arr = []) {
+        arr.push(node)
+        if (node.children) node.children.forEach((c) => flatten(c, arr))
+        return arr
+      }
+      function depth(node) {
+        let d = 0,
+          p = findParent(node.id)
+        while (p) {
+          d++
+          p = findParent(p.id)
+        }
+        return d
+      }
+      function snap(v) {
+        return gridOn ? Math.round(v / GRID) * GRID : v
+      }
+      function drawGrid(svg) {
+        if (!gridOn) return
+        for (let x = 0; x <= W; x += GRID) {
+          const line = document.createElementNS(
+            'http://www.w3.org/2000/svg',
+            'line'
+          )
+          line.setAttribute('x1', x)
+          line.setAttribute('y1', 0)
+          line.setAttribute('x2', x)
+          line.setAttribute('y2', H)
+          line.setAttribute('class', 'grid-line')
+          svg.appendChild(line)
+        }
+        for (let y = 0; y <= H; y += GRID) {
+          const line = document.createElementNS(
+            'http://www.w3.org/2000/svg',
+            'line'
+          )
+          line.setAttribute('x1', 0)
+          line.setAttribute('y1', y)
+          line.setAttribute('x2', W)
+          line.setAttribute('y2', y)
+          line.setAttribute('class', 'grid-line')
+          svg.appendChild(line)
+        }
+      }
+      function render() {
+        const svg = document.getElementById('tree-svg')
+        svg.innerHTML = ''
+        drawGrid(svg)
+        function drawEdges(node) {
+          if (!node.children) return
+          node.children.forEach((child) => {
+            const sx = node.x + node.w,
+              sy = node.y + node.h / 2,
+              ex = child.x,
+              ey = child.y + child.h / 2,
+              mx = (sx + ex) / 2
+            const path = document.createElementNS(
+              'http://www.w3.org/2000/svg',
+              'path'
+            )
+            path.setAttribute(
+              'd',
+              `M${sx},${sy} C${mx},${sy} ${mx},${ey} ${ex},${ey}`
+            )
+            path.setAttribute('class', 'edge')
+            if (child.dashed) path.setAttribute('stroke-dasharray', '4 4')
+            svg.appendChild(path)
+            const arrow = document.createElementNS(
+              'http://www.w3.org/2000/svg',
+              'polygon'
+            )
+            arrow.setAttribute(
+              'points',
+              `${ex},${ey} ${ex - 6},${ey - 4} ${ex - 6},${ey + 4}`
+            )
+            arrow.setAttribute('class', 'arrow')
+            svg.appendChild(arrow)
+            drawEdges(child)
+          })
+        }
+        drawEdges(treeData)
+        flatten(treeData).forEach((node) => {
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+          g.setAttribute(
+            'class',
+            'node-group' + (node.id === selectedId ? ' selected' : '')
+          )
+          g.setAttribute('data-id', node.id)
+          const rect = document.createElementNS(
+            'http://www.w3.org/2000/svg',
+            'rect'
+          )
+          rect.setAttribute('x', node.x)
+          rect.setAttribute('y', node.y)
+          rect.setAttribute('width', node.w)
+          rect.setAttribute('height', node.h)
+          rect.setAttribute('rx', 10)
+          rect.setAttribute('ry', 10)
+          rect.setAttribute('fill', node.color)
+          rect.setAttribute('stroke', node.dashed ? '#333' : 'transparent')
+          rect.setAttribute('class', 'node-rect')
+          rect.style.opacity = '0.95'
+          rect.addEventListener('mousedown', (e) => startDrag(e, node))
+          rect.addEventListener('click', (e) => {
+            e.stopPropagation()
+            selectNode(node.id)
+          })
+          rect.addEventListener('dblclick', (e) => {
+            e.stopPropagation()
+            editInline(node)
+          })
+          rect.addEventListener('contextmenu', (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            showCtx(e, node)
+          })
+          rect.addEventListener('mouseenter', (e) => showTooltip(e, node))
+          rect.addEventListener('mouseleave', hideTooltip)
+          g.appendChild(rect)
+          const text = document.createElementNS(
+            'http://www.w3.org/2000/svg',
+            'text'
+          )
+          text.setAttribute('x', node.x + node.w / 2)
+          text.setAttribute('y', node.y + node.h / 2 + 5)
+          text.setAttribute('text-anchor', 'middle')
+          text.setAttribute('class', 'node-text')
+          text.style.fill = node.textColor || '#111827'
+          text.textContent = node.label
+          g.appendChild(text)
+          svg.appendChild(g)
+        })
+      }
+      function showTooltip(e, node) {
+        if (!node.note) return
+        const tt = document.getElementById('tooltip')
+        tt.textContent = node.note
+        tt.classList.add('show')
+        moveTooltip(e)
+      }
+      function moveTooltip(e) {
+        const tt = document.getElementById('tooltip')
+        tt.style.left = e.pageX + 12 + 'px'
+        tt.style.top = e.pageY + 12 + 'px'
+      }
+      function hideTooltip() {
+        document.getElementById('tooltip').classList.remove('show')
+      }
+      function selectNode(id) {
+        selectedId = id
+        const node = findNode(id)
+        if (node) {
+          document.getElementById('inp-label').value = node.label
+          document.getElementById('inp-w').value = node.w
+          document.getElementById('inp-h').value = node.h
+          document.getElementById('inp-note').value = node.note || ''
+        }
+        render()
+      }
+      function startDrag(e, node) {
+        dragNode = node
+        const svg = document.getElementById('tree-svg')
+        const pt = svg.createSVGPoint()
+        pt.x = e.clientX
+        pt.y = e.clientY
+        const ctm = svg.getScreenCTM().inverse()
+        const loc = pt.matrixTransform(ctm)
+        dragOffset.x = loc.x - node.x
+        dragOffset.y = loc.y - node.y
+        document.addEventListener('mousemove', onDrag)
+        document.addEventListener('mouseup', endDrag)
+      }
+      function onDrag(e) {
+        if (!dragNode) return
+        const svg = document.getElementById('tree-svg')
+        const pt = svg.createSVGPoint()
+        pt.x = e.clientX
+        pt.y = e.clientY
+        const ctm = svg.getScreenCTM().inverse()
+        const loc = pt.matrixTransform(ctm)
+        dragNode.x = snap(
+          Math.max(0, Math.min(W - dragNode.w, loc.x - dragOffset.x))
+        )
+        dragNode.y = snap(
+          Math.max(0, Math.min(H - dragNode.h, loc.y - dragOffset.y))
+        )
+        render()
+      }
+      function endDrag() {
+        dragNode = null
+        document.removeEventListener('mousemove', onDrag)
+        document.removeEventListener('mouseup', endDrag)
+      }
+      function editInline(node) {
+        const svg = document.getElementById('tree-svg')
+        const foreign = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'foreignObject'
+        )
+        foreign.setAttribute('x', node.x)
+        foreign.setAttribute('y', node.y)
+        foreign.setAttribute('width', node.w)
+        foreign.setAttribute('height', node.h)
+        const input = document.createElement('input')
+        input.value = node.label
+        input.style.cssText =
+          'width:100%;height:100%;border:none;background:transparent;text-align:center;font-family:monospace;font-size:13px;font-weight:500;color:#e5e5e5;outline:none;padding:0;'
+        input.onblur = () => {
+          node.label = input.value
+          foreign.remove()
+          render()
+        }
+        input.onkeydown = (e) => {
+          if (e.key === 'Enter') input.blur()
+        }
+        foreign.appendChild(input)
+        svg.appendChild(foreign)
+        input.focus()
+        input.select()
+      }
+      function showCtx(e, node) {
+        ctxTarget = node
+        const menu = document.getElementById('ctx-menu')
+        menu.style.display = 'block'
+        menu.style.left = e.pageX + 'px'
+        menu.style.top = e.pageY + 'px'
+      }
+      document.addEventListener('click', () => {
+        document.getElementById('ctx-menu').style.display = 'none'
+      })
+      function ctxAddChild() {
+        if (ctxTarget) addChildTo(ctxTarget)
+      }
+      function ctxAddSibling() {
+        if (ctxTarget) addSiblingTo(ctxTarget)
+      }
+      function ctxDelete() {
+        if (ctxTarget) deleteNodeById(ctxTarget.id)
+      }
+      function addChild() {
+        if (!selectedId) return
+        const node = findNode(selectedId)
+        if (node) addChildTo(node)
+      }
+      function typeForDepth(d) {
+        if (d >= TYPES.length) return TYPES[TYPES.length - 1]
+        return TYPES[d]
+      }
+      function addChildTo(parent) {
+        if (!parent.children) parent.children = []
+        const id = 'n' + nextId++
+        const d = depth(parent) + 1
+        const t = typeForDepth(d)
+        parent.children.push({
+          id,
+          label: 'new',
+          x: snap(parent.x + 220),
+          y: snap(parent.y + parent.children.length * 50 - 25),
+          w: t.w,
+          h: t.h,
+          color: t.color,
+          textColor: t.text,
+        })
+        render()
+        selectNode(id)
+      }
+      function addSibling() {
+        if (!selectedId) return
+        const node = findNode(selectedId)
+        if (node) addSiblingTo(node)
+      }
+      function addSiblingTo(node) {
+        const parent = findParent(node.id)
+        if (!parent) return
+        const id = 'n' + nextId++
+        const d = depth(node)
+        const t = typeForDepth(d)
+        const idx = parent.children.indexOf(node)
+        parent.children.splice(idx + 1, 0, {
+          id,
+          label: 'new',
+          x: snap(node.x),
+          y: snap(node.y + 50),
+          w: t.w,
+          h: t.h,
+          color: t.color,
+          textColor: t.text,
+        })
+        render()
+        selectNode(id)
+      }
+      function deleteNode() {
+        if (!selectedId || selectedId === 'n0') return
+        deleteNodeById(selectedId)
+      }
+      function deleteNodeById(id) {
+        if (id === 'n0') return
+        const parent = findParent(id)
+        if (parent) {
+          parent.children = parent.children.filter((c) => c.id !== id)
+          selectedId = null
+          render()
+        }
+      }
+      function setColor(idx) {
+        if (!selectedId) return
+        const t = TYPES[idx]
+        const node = findNode(selectedId)
+        if (node) {
+          node.color = t.color
+          node.textColor = t.text
+          node.w = t.w
+          node.h = t.h
+          document.getElementById('inp-w').value = t.w
+          document.getElementById('inp-h').value = t.h
+          render()
+        }
+      }
+      function updateLabel(val) {
+        if (!selectedId) return
+        const node = findNode(selectedId)
+        if (node) {
+          node.label = val
+          render()
+        }
+      }
+      function updateSize(key, val) {
+        if (!selectedId) return
+        const node = findNode(selectedId)
+        if (node) {
+          node[key] = parseInt(val) || 40
+          render()
+        }
+      }
+      function updateNote(val) {
+        if (!selectedId) return
+        const node = findNode(selectedId)
+        if (node) {
+          node.note = val || undefined
+          render()
+        }
+      }
+      function toggleGrid() {
+        gridOn = !gridOn
+        const btn = document.getElementById('btn-grid')
+        btn.textContent = 'Grid: ' + (gridOn ? 'ON' : 'OFF')
+        btn.classList.toggle('on', gridOn)
+        if (gridOn) {
+          flatten(treeData).forEach((n) => {
+            n.x = snap(n.x)
+            n.y = snap(n.y)
+          })
+          render()
+        }
+      }
+      function autoLayout() {
+        function subtreeHeight(node) {
+          if (!node.children || node.children.length === 0) return node.h + 12
+          let h = 0
+          node.children.forEach((c, i) => {
+            h += subtreeHeight(c)
+            if (i < node.children.length - 1) h += 20
+          })
+          return h
+        }
+        function layoutNode(node, x, yCenter) {
+          node.x = snap(x)
+          if (!node.children || node.children.length === 0) {
+            node.y = snap(yCenter - node.h / 2)
+            return
+          }
+          const gapX = 220
+          const childX = x + node.w + gapX
+          let totalH = 0
+          node.children.forEach((c, i) => {
+            totalH += subtreeHeight(c)
+            if (i < node.children.length - 1) totalH += 20
+          })
+          let childY = yCenter - totalH / 2
+          node.children.forEach((c, i) => {
+            const ch = subtreeHeight(c)
+            layoutNode(c, childX, childY + ch / 2)
+            childY += ch
+            if (i < node.children.length - 1) childY += 20
+          })
+          const firstC = node.children[0],
+            lastC = node.children[node.children.length - 1]
+          node.y = snap((firstC.y + lastC.y + lastC.h) / 2 - node.h / 2)
+        }
+        layoutNode(treeData, 200, H / 2)
+        render()
+      }
+      function resetTree() {
+        nextId = 15
+        selectedId = null
+        treeData = {
+          id: 'n0',
+          label: 'yourtool',
+          x: 200,
+          y: 1000,
+          w: 90,
+          h: 40,
+          color: '#e5e7eb',
+          textColor: '#111827',
+          children: [
+            {
+              id: 'n1',
+              label: 'authentik',
+              x: 440,
+              y: 1000,
+              w: 100,
+              h: 40,
+              color: '#4ade80',
+              textColor: '#064e3b',
+              children: [
+                {
+                  id: 'n2',
+                  label: 'users',
+                  x: 680,
+                  y: 800,
+                  w: 80,
+                  h: 36,
+                  color: '#60a5fa',
+                  textColor: '#1e3a8a',
+                  children: [
+                    {
+                      id: 'n3',
+                      label: '(list users)',
+                      x: 920,
+                      y: 800,
+                      w: 110,
+                      h: 32,
+                      color: '#93c5fd',
+                      textColor: '#1e3a8a',
+                      dashed: true,
+                    },
+                  ],
+                },
+                {
+                  id: 'n4',
+                  label: 'groups',
+                  x: 680,
+                  y: 900,
+                  w: 80,
+                  h: 36,
+                  color: '#60a5fa',
+                  textColor: '#1e3a8a',
+                  children: [
+                    {
+                      id: 'n5',
+                      label: '(list groups)',
+                      x: 920,
+                      y: 900,
+                      w: 110,
+                      h: 32,
+                      color: '#93c5fd',
+                      textColor: '#1e3a8a',
+                      dashed: true,
+                    },
+                  ],
+                },
+                {
+                  id: 'n6',
+                  label: 'create',
+                  x: 680,
+                  y: 1000,
+                  w: 80,
+                  h: 36,
+                  color: '#60a5fa',
+                  textColor: '#1e3a8a',
+                  children: [
+                    {
+                      id: 'n7',
+                      label: '--user',
+                      x: 920,
+                      y: 940,
+                      w: 80,
+                      h: 32,
+                      color: '#f87171',
+                      textColor: '#7f1d1d',
+                      children: [
+                        {
+                          id: 'n8',
+                          label: '<username>',
+                          x: 1160,
+                          y: 860,
+                          w: 110,
+                          h: 30,
+                          color: '#a78bfa',
+                          textColor: '#4c1d95',
+                        },
+                        {
+                          id: 'n9',
+                          label: '<email>',
+                          x: 1160,
+                          y: 910,
+                          w: 90,
+                          h: 30,
+                          color: '#a78bfa',
+                          textColor: '#4c1d95',
+                        },
+                        {
+                          id: 'n10',
+                          label: '<name>',
+                          x: 1160,
+                          y: 960,
+                          w: 90,
+                          h: 30,
+                          color: '#a78bfa',
+                          textColor: '#4c1d95',
+                        },
+                        {
+                          id: 'n11',
+                          label: '--groups',
+                          x: 1160,
+                          y: 1010,
+                          w: 90,
+                          h: 30,
+                          color: '#a78bfa',
+                          textColor: '#4c1d95',
+                        },
+                        {
+                          id: 'n12',
+                          label: '--ssh-key',
+                          x: 1160,
+                          y: 1060,
+                          w: 90,
+                          h: 30,
+                          color: '#a78bfa',
+                          textColor: '#4c1d95',
+                        },
+                      ],
+                    },
+                    {
+                      id: 'n13',
+                      label: '--group',
+                      x: 920,
+                      y: 1040,
+                      w: 80,
+                      h: 32,
+                      color: '#f87171',
+                      textColor: '#7f1d1d',
+                      children: [
+                        {
+                          id: 'n14',
+                          label: '<name>',
+                          x: 1160,
+                          y: 1040,
+                          w: 90,
+                          h: 30,
+                          color: '#a78bfa',
+                          textColor: '#4c1d95',
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        }
+        render()
+      }
+      function exportTree() {
+        const data = JSON.stringify(treeData, null, 2)
+        const blob = new Blob([data], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'cli-tree.json'
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+      function exportSVG() {
+        const all = flatten(treeData)
+        let minX = Infinity,
+          minY = Infinity,
+          maxX = -Infinity,
+          maxY = -Infinity
+        all.forEach((n) => {
+          minX = Math.min(minX, n.x - 20)
+          minY = Math.min(minY, n.y - 20)
+          maxX = Math.max(maxX, n.x + n.w + 20)
+          maxY = Math.max(maxY, n.y + n.h + 20)
+        })
+        const pad = 40
+        const vw = maxX - minX + pad * 2,
+          vh = maxY - minY + pad * 2
+        let svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${vw}' height='${vh}' viewBox='${
+          minX - pad
+        } ${
+          minY - pad
+        } ${vw} ${vh}'><rect width='100%' height='100%' fill='#0a0a0a'/>`
+        function drawEdges(node) {
+          if (!node.children) return
+          node.children.forEach((child) => {
+            const sx = node.x + node.w,
+              sy = node.y + node.h / 2,
+              ex = child.x,
+              ey = child.y + child.h / 2,
+              mx = (sx + ex) / 2
+            let d = `M${sx},${sy} C${mx},${sy} ${mx},${ey} ${ex},${ey}`
+            svg += `<path d="${d}" stroke="#555" stroke-width="2" fill="none"${
+              child.dashed ? ' stroke-dasharray="4 4"' : ''
+            }/>`
+            svg += `<polygon points="${ex},${ey} ${ex - 6},${ey - 4} ${
+              ex - 6
+            },${ey + 4}" fill="#555"/>`
+            drawEdges(child)
+          })
+        }
+        drawEdges(treeData)
+        all.forEach((node) => {
+          svg += `<rect x="${node.x}" y="${node.y}" width="${node.w}" height="${
+            node.h
+          }" rx="10" ry="10" fill="${node.color}" stroke="${
+            node.dashed ? '#333' : 'transparent'
+          }" stroke-width="2" opacity="0.95"/>`
+          svg += `<text x="${node.x + node.w / 2}" y="${
+            node.y + node.h / 2 + 5
+          }" text-anchor="middle" font-family="'SFMono-Regular',Consolas,monospace" font-size="13" font-weight="500" fill="${
+            node.textColor || '#111827'
+          }">${node.label
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')}</text>`
+        })
+        svg += '</svg>'
+        const blob = new Blob([svg], { type: 'image/svg+xml' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'cli-tree.svg'
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+      function importTree() {
+        document.getElementById('file-input').click()
+      }
+      function handleFile(e) {
+        const file = e.target.files[0]
+        if (!file) return
+        const reader = new FileReader()
+        reader.onload = (ev) => {
+          try {
+            const data = JSON.parse(ev.target.result)
+            treeData = data
+            const ids = flatten(treeData).map(
+              (n) => parseInt(n.id.replace('n', '')) || 0
+            )
+            nextId = Math.max(...ids, 0) + 1
+            selectedId = null
+            render()
+          } catch (err) {
+            alert('Invalid JSON file')
+          }
+        }
+        reader.readAsText(file)
+      }
+      render()
+    </script>
+  </body>
+</html>
