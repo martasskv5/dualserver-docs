@@ -330,11 +330,11 @@ pct stop 9000
 pct template 9000
 ```
 
-### Part 3: Per-LXC access control
+## Part 3: Per-LXC access control
 How it works
 The file `/etc/lxc-access.conf` on each LXC contains a list of usernames allowed to log in. `pam_listfile.so` checks this file on every SSH login. No Authentik apps, no per-user groups, no firewall rules.
 Example access files:
-`sk25-26-student1` LXC:
+### `sk25-26-student1` LXC:
 ```
 akadmin
 lector1
@@ -342,12 +342,10 @@ lector2
 student1
 ```
 
-`sk25-26-lector1` LXC:
+### `sk25-26-lector1` LXC:
 ```
 akadmin
 lector1
-lector2
-student1
 ```
 - `akadmin` (admin) can access every LXC
 - `lector1`, `lector2` can access all LXCs in their year group

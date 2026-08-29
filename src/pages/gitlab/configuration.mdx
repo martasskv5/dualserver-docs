@@ -31,14 +31,41 @@ Change the root password immediately after logging in.
 4. Save the changes
 
 ## Configure the hostname
-Ensure the external URL is correct in /etc/gitlab/gitlab.rb:
+Ensure the external URL is correct in `/etc/gitlab/gitlab.rb`:
 ```ruby
 external_url 'https://git.pve99.internal'
 ```
 
+## SMTP settings
+
+In order to send emails, configure the SMTP settings in `/etc/gitlab/gitlab.rb`:
+
+```ruby
+gitlab_rails['smtp_enable'] = true
+gitlab_rails['smtp_address'] = "postfix"
+gitlab_rails['smtp_port'] = 25
+# gitlab_rails['smtp_user_name'] = "smtp user" # postfix is configured to allow unauthenticated sending from the internal network, so no username is required
+# gitlab_rails['smtp_password'] = "smtp password"
+gitlab_rails['smtp_domain'] = "0z6sw.onmicrosoft.com"
+gitlab_rails['smtp_authentication'] = false
+# gitlab_rails['smtp_enable_starttls_auto'] = true
+gitlab_rails['smtp_tls'] = false
+gitlab_rails['smtp_pool'] = falsegitlab_rails['gitlab_email_enabled'] = true
+
+gitlab_rails['gitlab_email_from'] = 'gitlab@0z6sw.onmicrosoft.com'
+gitlab_rails['gitlab_email_display_name'] = 'GitLab'
+gitlab_rails['gitlab_email_reply_to'] = 'noreply@0z6sw.onmicrosoft.com'
+````
+
 Then reconfigure:
 ```bash
 gitlab-ctl reconfigure
+```
+
+Test directly from the console:
+```bash
+gitlab-rails console
+Notify.test_email('admin@0z6sw.onmicrosoft.com', 'Test', 'Body').deliver_now
 ```
 
 Next steps

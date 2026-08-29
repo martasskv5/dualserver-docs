@@ -32,6 +32,15 @@ echo "PG_PASS=$(openssl rand -base64 36 | tr -d '\n')" >> .env
 echo "AUTHENTIK_SECRET_KEY=$(openssl rand -base64 60 | tr -d '\n')" >> .env
 echo "COMPOSE_PORT_HTTP=80" >> .env
 echo "COMPOSE_PORT_HTTPS=443" >> .env
+
+echo "AUTHENTIK_EMAIL__HOST=postfix.mgmt.pve99.local" >> .env
+echo "AUTHENTIK_EMAIL__PORT=25" >> .env
+echo "AUTHENTIK_EMAIL__USERNAME=" >> .env
+echo "AUTHENTIK_EMAIL__PASSWORD=" >> .env
+echo "AUTHENTIK_EMAIL__USE_TLS=false" >> .env
+echo "AUTHENTIK_EMAIL__USE_SSL=false" >> .env
+echo "AUTHENTIK_EMAIL__TIMEOUT=10" >> .env
+echo "AUTHENTIK_EMAIL__FROM=authentik@0z6sw.onmicrosoft.com" >> .env
 ```
 
 Pull and start the containers:
